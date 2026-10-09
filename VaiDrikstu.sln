@@ -1,0 +1,42 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VaiDrikstu.Domain", "src\VaiDrikstu.Domain\VaiDrikstu.Domain.csproj", "{E46F7B31-746A-4E01-8D70-73D0910B8E51}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VaiDrikstu.Api", "src\VaiDrikstu.Api\VaiDrikstu.Api.csproj", "{3E1A92C2-2D72-46D9-A34C-0278F1F03592}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VaiDrikstu.DataImporter", "src\VaiDrikstu.DataImporter\VaiDrikstu.DataImporter.csproj", "{29E942DF-F26D-4635-A452-284F2F78E69B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VaiDrikstu.AppHost", "src\VaiDrikstu.AppHost\VaiDrikstu.AppHost.csproj", "{F95C032B-0826-4C52-AC93-977C2D1821A1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VaiDrikstu.Domain.Tests", "tests\VaiDrikstu.Domain.Tests\VaiDrikstu.Domain.Tests.csproj", "{5C90D095-D0C3-45E8-802C-B83DBF2A9405}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E46F7B31-746A-4E01-8D70-73D0910B8E51}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E46F7B31-746A-4E01-8D70-73D0910B8E51}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E46F7B31-746A-4E01-8D70-73D0910B8E51}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E46F7B31-746A-4E01-8D70-73D0910B8E51}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3E1A92C2-2D72-46D9-A34C-0278F1F03592}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3E1A92C2-2D72-46D9-A34C-0278F1F03592}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3E1A92C2-2D72-46D9-A34C-0278F1F03592}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3E1A92C2-2D72-46D9-A34C-0278F1F03592}.Release|Any CPU.Build.0 = Release|Any CPU
+		{29E942DF-F26D-4635-A452-284F2F78E69B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{29E942DF-F26D-4635-A452-284F2F78E69B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{29E942DF-F26D-4635-A452-284F2F78E69B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{29E942DF-F26D-4635-A452-284F2F78E69B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F95C032B-0826-4C52-AC93-977C2D1821A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F95C032B-0826-4C52-AC93-977C2D1821A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F95C032B-0826-4C52-AC93-977C2D1821A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F95C032B-0826-4C52-AC93-977C2D1821A1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5C90D095-D0C3-45E8-802C-B83DBF2A9405}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5C90D095-D0C3-45E8-802C-B83DBF2A9405}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5C90D095-D0C3-45E8-802C-B83DBF2A9405}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5C90D095-D0C3-45E8-802C-B83DBF2A9405}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

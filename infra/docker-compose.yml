@@ -1,0 +1,52 @@
+services:
+  postgis:
+    image: postgis/postgis:17-3.5
+    platform: linux/amd64
+    environment:
+      POSTGRES_DB: vaidrikstu
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d vaidrikstu"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  data-importer:
+    build:
+      context: ..
+      dockerfile: src/VaiDrikstu.DataImporter/Dockerfile
+    environment:
+      ConnectionStrings__vaidrikstu: Host=postgis;Port=5432;Database=vaidrikstu;Username=postgres;Password=postgres
+    depends_on:
+      postgis:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ..
+      dockerfile: src/VaiDrikstu.Api/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__vaidrikstu: Host=postgis;Port=5432;Database=vaidrikstu;Username=postgres;Password=postgres
+    ports:
+      - "8080:8080"
+    depends_on:
+      data-importer:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: ..
+      dockerfile: web/Dockerfile
+    ports:
+      - "8081:80"
+    depends_on:
+      - api
+
+volumes:
+  postgis-data:
