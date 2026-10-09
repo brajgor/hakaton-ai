@@ -1,0 +1,9 @@
+[
+  {
+    "id": "nkmp-demo-riga-castle-area",
+    "name": "Rīgas pils kultūrvēsturiskā teritorija (demo izgriezums)",
+    "type": "Valsts aizsargājams kultūras piemineklis",
+    "status": "Aizsargājams",
+    "wkt": "POLYGON((24.1048 56.9501,24.1070 56.9501,24.1070 56.9514,24.1048 56.9514,24.1048 56.9501))"
+  }
+]

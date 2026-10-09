@@ -1,0 +1,9 @@
+[
+  {
+    "id": "dap-demo-jurmala-dune-zone",
+    "name": "Īpaši aizsargājama piekrastes dabas teritorija (demo izgriezums)",
+    "category": "ĪADT / Natura 2000 pārbaudes slānis",
+    "source": "DAP open-data compatible demo snapshot",
+    "wkt": "POLYGON((23.9180 56.9870,23.9290 56.9870,23.9290 56.9940,23.9180 56.9940,23.9180 56.9870))"
+  }
+]

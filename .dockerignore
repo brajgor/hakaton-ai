@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.vite/
+**/.DS_Store
+**/*.user
+**/*.suo
+**/*.tsbuildinfo
+.git/
+.idea/
+.vscode/

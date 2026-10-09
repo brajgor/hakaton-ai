@@ -1,0 +1,26 @@
+[
+  {
+    "id": "addr-clean-valmiera",
+    "normalizedAddress": "Zvaigžņu iela 1, Valmiera, Valmieras nov.",
+    "arCode": "DEMO-AR-100001",
+    "municipality": "Valmieras novads",
+    "latitude": 57.5389,
+    "longitude": 25.4262
+  },
+  {
+    "id": "addr-heritage-riga",
+    "normalizedAddress": "Pils laukums 3, Rīga",
+    "arCode": "DEMO-AR-100002",
+    "municipality": "Rīga",
+    "latitude": 56.9507,
+    "longitude": 24.1059
+  },
+  {
+    "id": "addr-nature-jurmala",
+    "normalizedAddress": "Meža prospekts 1, Jūrmala",
+    "arCode": "DEMO-AR-100003",
+    "municipality": "Jūrmala",
+    "latitude": 56.9908,
+    "longitude": 23.9231
+  }
+]
