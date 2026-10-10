@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { AlertTriangle, CheckCircle2, FileCheck2, Landmark, Loader2, MapPin, Search } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CheckCircle2, Database, FileCheck2, Landmark, Loader2, MapPin, Search, ShieldCheck } from 'lucide-react';
 import texts from './i18n/lv.json';
 import './styles.css';
 
@@ -34,6 +34,7 @@ type PrecheckResponse = {
 type MockSession = { urn: string; displayName: string; authMethod: string };
 
 function App() {
+  const [started, setStarted] = useState(false);
   const [step, setStep] = useState(0);
   const [session, setSession] = useState<MockSession | null>(null);
   const [intents, setIntents] = useState<Intent[]>([]);
@@ -93,7 +94,7 @@ function App() {
         body: JSON.stringify({ intentId: selectedIntent, addressId: selectedAddress.id }),
       });
       setResult(response);
-      setStep(2);
+      setStep(1);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Nezināma kļūda.');
     } finally {
@@ -101,17 +102,15 @@ function App() {
     }
   }
 
-  function goNext() {
-    setMessage('');
-    if (step === 0 && !selectedIntent) {
-      setMessage(texts.noIntent);
-      return;
+  function selectAddress(address: Address) {
+    if (address.id !== selectedAddress?.id) {
+      setSelectedIntent('');
     }
-    if (step === 1 && !selectedAddress) {
-      setMessage(texts.noAddress);
-      return;
-    }
-    setStep((current) => Math.min(current + 1, 3));
+    setSelectedAddress(address);
+  }
+
+  if (!started) {
+    return <LandingScreen onStart={() => setStarted(true)} />;
   }
 
   return (
@@ -152,31 +151,33 @@ function App() {
 
       <section className="panel" aria-live="polite">
         {step === 0 && (
-          <IntentStep
-            intents={intents}
-            selectedIntent={selectedIntent}
-            onSelect={setSelectedIntent}
-          />
+          <>
+            <AddressStep
+              query={query}
+              setQuery={setQuery}
+              addresses={addresses}
+              selectedAddress={selectedAddress}
+              setSelectedAddress={selectAddress}
+              onSearch={searchAddresses}
+              busy={busy}
+            />
+            {selectedAddress && (
+              <IntentStep
+                intents={intents}
+                selectedIntent={selectedIntent}
+                onSelect={setSelectedIntent}
+              />
+            )}
+          </>
         )}
         {step === 1 && (
-          <AddressStep
-            query={query}
-            setQuery={setQuery}
-            addresses={addresses}
-            selectedAddress={selectedAddress}
-            setSelectedAddress={setSelectedAddress}
-            onSearch={searchAddresses}
-            busy={busy}
-          />
-        )}
-        {step === 2 && (
           <ResultStep
             result={result}
             selectedIntent={selectedIntentModel}
             selectedAddress={selectedAddress}
           />
         )}
-        {step === 3 && (
+        {step === 2 && (
           <SummaryStep
             result={result}
             selectedIntent={selectedIntentModel}
@@ -190,18 +191,14 @@ function App() {
         <button type="button" className="secondary" onClick={() => setStep((current) => Math.max(0, current - 1))} disabled={step === 0 || busy}>
           {texts.back}
         </button>
-        {step === 1 ? (
-          <button type="button" className="primary" onClick={runPrecheck} disabled={busy}>
+        {step === 0 ? (
+          <button type="button" className="primary" onClick={runPrecheck} disabled={busy || !selectedAddress || !selectedIntent}>
             {busy ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <FileCheck2 size={18} aria-hidden="true" />}
             {texts.submit}
           </button>
-        ) : step === 2 ? (
-          <button type="button" className="primary" onClick={() => setStep(3)} disabled={!result}>
+        ) : step === 1 ? (
+          <button type="button" className="primary" onClick={() => setStep(2)} disabled={!result}>
             {texts.finish}
-          </button>
-        ) : step < 3 ? (
-          <button type="button" className="primary" onClick={goNext} disabled={busy}>
-            {texts.next}
           </button>
         ) : (
           <button type="button" className="primary" onClick={() => window.print()}>
@@ -213,9 +210,48 @@ function App() {
   );
 }
 
+function LandingScreen({ onStart }: { onStart: () => void }) {
+  const features = [
+    { icon: <MapPin size={22} aria-hidden="true" />, title: texts.landing.feature1Title, text: texts.landing.feature1Text },
+    { icon: <Database size={22} aria-hidden="true" />, title: texts.landing.feature2Title, text: texts.landing.feature2Text },
+    { icon: <ShieldCheck size={22} aria-hidden="true" />, title: texts.landing.feature3Title, text: texts.landing.feature3Text },
+  ];
+
+  return (
+    <main className="shell landing">
+      <p className="eyebrow">Latvija.gov.lv e-pakalpojuma prototips</p>
+      <h1>{texts.appTitle}</h1>
+      <p className="lead">{texts.landing.lead}</p>
+
+      <section className="panel landingPanel">
+        <h2>{texts.landing.howTitle}</h2>
+        <ul className="features">
+          {features.map((feature) => (
+            <li key={feature.title}>
+              {feature.icon}
+              <span>
+                <strong>{feature.title}</strong>
+                <small>{feature.text}</small>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="disclaimer">{texts.disclaimer}</p>
+      </section>
+
+      <div className="landingActions">
+        <button type="button" className="primary" onClick={onStart}>
+          {texts.landing.start}
+          <ArrowRight size={18} aria-hidden="true" />
+        </button>
+      </div>
+    </main>
+  );
+}
+
 function IntentStep({ intents, selectedIntent, onSelect }: { intents: Intent[]; selectedIntent: string; onSelect: (id: string) => void }) {
   return (
-    <>
+    <section className="block">
       <h2>{texts.actionsTitle}</h2>
       <p className="muted">{texts.actionsLead}</p>
       <fieldset className="choices">
@@ -236,7 +272,7 @@ function IntentStep({ intents, selectedIntent, onSelect }: { intents: Intent[]; 
           </label>
         ))}
       </fieldset>
-    </>
+    </section>
   );
 }
 

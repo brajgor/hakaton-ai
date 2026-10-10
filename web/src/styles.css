@@ -105,7 +105,7 @@ small {
 
 .stepper {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 16px;
 }
@@ -391,6 +391,49 @@ button:disabled {
   to {
     transform: rotate(360deg);
   }
+}
+
+.landing {
+  max-width: 820px;
+  padding-top: 56px;
+}
+
+.landingPanel {
+  margin-top: 28px;
+  min-height: 0;
+}
+
+.features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.features li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  color: var(--brand);
+}
+
+.features strong,
+.features small {
+  display: block;
+}
+
+.features strong {
+  color: #1f252e;
+}
+
+.landingActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 @media (max-width: 760px) {

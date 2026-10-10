@@ -1,10 +1,10 @@
 {
-  "appTitle": "Vai drīkstu te darīt?",
+  "appTitle": "Plānoto darbu priekšpārbaude pēc adreses",
   "appSubtitle": "Priekšpārbaude pēc atvērtajiem datiem pirms oficiālās saskaņošanas.",
   "disclaimer": "Šī ir priekšpārbaude, nevis galīgā atļauja. Galīgo lēmumu pieņem kompetentā iestāde.",
-  "steps": ["Darbība", "Adrese", "Pārbaudes rezultāts", "Kopsavilkums"],
+  "steps": ["Adrese un darbība", "Pārbaudes rezultāts", "Kopsavilkums"],
   "actionsTitle": "Ko Jūs vēlaties darīt?",
-  "actionsLead": "Izvēlieties vienu mērķi. Retākus gadījumus šajā prototipā vēl neapstrādājam.",
+  "actionsLead": "Izvēlieties vienu darbību šai adresei. Retākus gadījumus šajā prototipā vēl neapstrādājam.",
   "addressTitle": "Kur plānota darbība?",
   "addressLead": "Prototipā adrese tiek meklēta lokālā atvērto datu izgriezumā. Produkcijā šeit būtu VISS AMK komponente.",
   "resultTitle": "Ko atradām atvērtajos datos?",
@@ -24,5 +24,16 @@
   "nextSteps": "Kas jādara tālāk",
   "findings": "Datu atradumi",
   "session": "Demo sesija",
-  "officialPath": "Oficiālais ceļš produkcijā: Latvija.lv autentifikācija, BFF, VISS/API pārvaldnieks un kompetentās iestādes lēmums."
+  "officialPath": "Oficiālais ceļš produkcijā: Latvija.lv autentifikācija, BFF, VISS/API pārvaldnieks un kompetentās iestādes lēmums.",
+  "landing": {
+    "lead": "E-pakalpojums palīdz ātri noskaidrot, vai plānotā darbība izvēlētajā adresē var saskarties ar ierobežojumiem. Pārbaude balstās uz atvērtajiem datiem un notiek dažās minūtēs.",
+    "howTitle": "Kā tas darbojas",
+    "feature1Title": "Izvēlieties darbību un adresi",
+    "feature1Text": "Norādiet, ko plānojat darīt, un atrodiet adresi, kurā darbība notiks.",
+    "feature2Title": "Automātiska datu pārbaude",
+    "feature2Text": "Sistēma pēc skaidriem noteikumiem salīdzina adresi ar atvērtajiem telpiskajiem datiem.",
+    "feature3Title": "Rezultāts un nākamie soļi",
+    "feature3Text": "Saņemiet pamatotu rezultātu un norādi, kas jādara tālāk oficiālajā saskaņošanā.",
+    "start": "Sākt priekšpārbaudi"
+  }
 }
