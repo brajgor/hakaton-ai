@@ -22,9 +22,9 @@ docker compose up --build
 ```
 
 Docker Compose starts PostGIS, imports the official local snapshots, runs the
-API, and serves the React SPA. The first run imports the national cadastral
-geometry and can take several minutes. Later runs repeat the import so a change
-in a source snapshot is always reflected in the database.
+API, and serves the React SPA. By default it loads a tiny, versioned demo
+dataset with three scenarios: green, heritage review, and nature review. It is
+intended for the hackathon presentation, not for legal or spatial conclusions.
 
 After it finishes:
 
@@ -47,6 +47,21 @@ dotnet run --project src/VaiDrikstu.DataImporter
 dotnet run --project src/VaiDrikstu.Api
 pnpm --dir web dev
 ```
+
+### Full official-data import (local only)
+
+Official snapshots are deliberately excluded from Git. Put them under
+`.local-data/sources/` and run:
+
+```bash
+cd building-precheck/infra
+docker compose -f docker-compose.full.yml up --build
+```
+
+This imports the nationwide VZD and DAP data plus the available Rīga layers.
+It can take several minutes and needs roughly 2 GB of local disk data. The
+official source snapshots remain on the developer machine and are not pushed to
+GitHub.
 
 ## Real-data checks
 
@@ -85,8 +100,9 @@ The MVP follows the local `vdaa-epakalpojumi` skill constraints:
 
 ## Data scope
 
-Docker Compose loads the official local snapshots in `data/sources` rather than
-the old demo JSON fixtures:
+The default Docker Compose stack loads the small demo dataset in `data/demo`.
+The separately launched full-data stack loads official local snapshots from
+`.local-data/sources`:
 
 - VZD State Address Register: active, confirmed address points nationwide;
 - VZD cadastral parcel and parcel-part geometry plus regional encumbrance CSVs;
@@ -102,5 +118,6 @@ They are marked `reference-only`: the supplied TAPIS extract is partial and the
 flood files are WMS capability documents, not vector features suitable for a
 deterministic PostGIS intersection.
 
-The old `*.demo.json` files are retained only as historical fixtures and are no
-longer read by Docker Compose or the data importer.
+The demo contains only curated test geometry. It makes the stack reproducible
+without publishing 2 GB of raw snapshots; it is never presented as a substitute
+for the official full-data import.

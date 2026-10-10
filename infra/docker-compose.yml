@@ -9,38 +9,26 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgis-data:/var/lib/postgresql/data
+      - postgis-demo-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d vaidrikstu"]
       interval: 5s
       timeout: 5s
       retries: 20
 
-  geo-importer:
-    build:
-      context: ..
-      dockerfile: infra/geo-importer/Dockerfile
+  demo-seed:
+    image: postgis/postgis:17-3.5
+    platform: linux/amd64
     environment:
-      POSTGIS_DSN: PG:host=postgis port=5432 dbname=vaidrikstu user=postgres password=postgres
-      DATA_SOURCES_PATH: /sources
+      PGPASSWORD: postgres
     volumes:
-      - ../data/sources:/sources:ro
+      - ../data/demo:/demo:ro
     depends_on:
       postgis:
         condition: service_healthy
-
-  data-importer:
-    build:
-      context: ..
-      dockerfile: src/VaiDrikstu.DataImporter/Dockerfile
-    environment:
-      ConnectionStrings__vaidrikstu: Host=postgis;Port=5432;Database=vaidrikstu;Username=postgres;Password=postgres
-      DATA_SOURCES_PATH: /app/data/sources
-    volumes:
-      - ../data/sources:/app/data/sources:ro
-    depends_on:
-      geo-importer:
-        condition: service_completed_successfully
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      psql -v ON_ERROR_STOP=1 -h postgis -U postgres -d vaidrikstu -f /demo/seed.sql
 
   api:
     build:
@@ -52,7 +40,7 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      data-importer:
+      demo-seed:
         condition: service_completed_successfully
 
   web:
@@ -65,4 +53,4 @@ services:
       - api
 
 volumes:
-  postgis-data:
+  postgis-demo-data:

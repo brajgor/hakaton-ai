@@ -8,6 +8,12 @@ dist/
 *.suo
 *.tsbuildinfo
 
+# Official open-data snapshots are downloaded locally for the full import.
+# They are intentionally never versioned with the hackathon source code.
+.local-data/
+data/sources/
+data/sources.zip
+
 # IDE
 .idea/
 .vs/
