@@ -26,9 +26,10 @@ services:
     depends_on:
       postgis:
         condition: service_healthy
-    entrypoint: ["/bin/sh", "-c"]
-    command: >
-      psql -v ON_ERROR_STOP=1 -h postgis -U postgres -d vaidrikstu -f /demo/seed.sql
+    entrypoint:
+      - /bin/sh
+      - -c
+      - psql -v ON_ERROR_STOP=1 -h postgis -U postgres -d vaidrikstu -f /demo/seed.sql
 
   api:
     build:
