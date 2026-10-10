@@ -204,7 +204,8 @@ public sealed class AssistantEngineTests(KnowledgeBaseFixture fixture) : IClassF
 
         Assert.Equal("ru", answer.Language);
         Assert.Contains("помощник", answer.Intro);
-        Assert.Contains(answer.Suggestions, suggestion => suggestion.Contains(ReasonCodes.HeritageSiteNearby));
+        Assert.Contains(answer.Suggestions, suggestion => suggestion.Contains("Рядом памятник культуры"));
+        Assert.DoesNotContain(answer.Suggestions, suggestion => suggestion.Contains(ReasonCodes.HeritageSiteNearby));
     }
 
     [Fact]

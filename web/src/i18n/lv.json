@@ -95,8 +95,8 @@
   },
   "assistant": {
     "title": "Palīgs: jautājiet par rezultātu",
-    "lead": "Paskaidroju rezultātu un atšifrēju kodus: apgrūtinājumus, kadastra atzīmes, zonējumu, aizsargjoslas, dabas teritorijas un pieminekļus. Var jautāt latviski, krieviski vai angliski.",
-    "placeholder": "Piemēram: Ko nozīmē 7312030100? / Что значит DzS1?",
+    "lead": "Paskaidroju rezultātu un atšifrēju kodus: apgrūtinājumus, kadastra atzīmes, zonējumu, aizsargjoslas, dabas teritorijas un pieminekļus.",
+    "placeholder": "Piemēram: Ko nozīmē 7312030100? / Kas ir DzS1?",
     "inputLabel": "Jautājums palīgam",
     "send": "Jautāt",
     "thinking": "Meklēju datos…",

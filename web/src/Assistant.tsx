@@ -25,12 +25,6 @@ export type AssistantAnswer = {
 
 type Message = { id: number; role: 'user'; text: string } | { id: number; role: 'bot'; answer: AssistantAnswer };
 
-const originalLabel: Record<AssistantAnswer['language'], string> = {
-  lv: '',
-  ru: 'оригинал на латышском',
-  en: 'Latvian original',
-};
-
 type Props = {
   requestId?: string;
   ask: (question: string, requestId?: string) => Promise<AssistantAnswer>;
@@ -167,12 +161,7 @@ function BotMessage({ answer }: { answer: AssistantAnswer }) {
             <li key={`${item.kind}-${item.code}-${item.title}`}>
               <div className="answerMeta">
                 <span className="kind">{item.kindLabel}</span>
-                {item.code && item.code !== item.title && <code>{item.code}</code>}
-                {item.originalLanguage && originalLabel[answer.language] && (
-                  <span className="original" lang="lv">
-                    {originalLabel[answer.language]}
-                  </span>
-                )}
+                {item.code && item.code !== item.title && item.kind !== 'reason' && item.kind !== 'level' && <code>{item.code}</code>}
               </div>
               <strong lang={item.originalLanguage ? 'lv' : undefined}>{item.title}</strong>
               {item.text && <p lang={item.originalLanguage ? 'lv' : undefined}>{item.text}</p>}

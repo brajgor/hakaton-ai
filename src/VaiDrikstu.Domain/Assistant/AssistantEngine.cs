@@ -42,7 +42,7 @@ public sealed class AssistantEngine(KnowledgeBase knowledgeBase)
 
     public KnowledgeBase KnowledgeBase { get; } = knowledgeBase;
 
-    public AssistantAnswer Answer(string? question, AssistantContext? context = null, string? preferredLanguage = null)
+    public AssistantAnswer Answer(string? question, AssistantContext? context = null, string? preferredLanguage = null, bool lockLanguage = false)
     {
         var text = (question ?? string.Empty).Trim();
         if (text.Length > 500)
@@ -50,7 +50,8 @@ public sealed class AssistantEngine(KnowledgeBase knowledgeBase)
             text = text[..500];
         }
 
-        var language = text.Any(char.IsLetter)
+        // lockLanguage: always answer in preferredLanguage instead of the language detected from the question.
+        var language = !lockLanguage && text.Any(char.IsLetter)
             ? TextAnalysis.DetectLanguage(text)
             : Normalize(preferredLanguage);
         var folded = TextAnalysis.Fold(text);
@@ -551,17 +552,20 @@ public sealed class AssistantEngine(KnowledgeBase knowledgeBase)
     private static AssistantAnswer Build(string language, string introKey, List<AssistantItem> items, string[] suggestions) =>
         new(language, AssistantTexts.Get(language, introKey), items.ToArray(), suggestions, AssistantTexts.Get(language, "disclaimer"), items.Count > 0);
 
-    private static string[] Suggestions(string language, AssistantContext? context, string foldedQuestion)
+    private string[] Suggestions(string language, AssistantContext? context, string foldedQuestion)
     {
         var list = new List<string>();
         if (context is not null)
         {
             list.Add(AssistantTexts.Get(language, "suggest.why"));
             list.Add(AssistantTexts.Get(language, "suggest.next"));
+            // Suggest questions by the human-readable reason title, never by the raw reason code.
             list.AddRange(context.ReasonCodes
                 .Where(code => code is not ReasonCodes.AddressFound and not ReasonCodes.OfficialReviewRequired)
+                .Select(code => KnowledgeBase.Find("reason", code))
+                .OfType<KnowledgeLabel>()
                 .Take(2)
-                .Select(code => AssistantTexts.Get(language, "suggest.code", code)));
+                .Select(label => AssistantTexts.Get(language, "suggest.code", ReasonTitle(label, language))));
         }
 
         list.Add(AssistantTexts.Get(language, "suggest.encumbrance"));
@@ -575,6 +579,11 @@ public sealed class AssistantEngine(KnowledgeBase knowledgeBase)
             .Take(4)
             .ToArray();
     }
+
+    private static string ReasonTitle(KnowledgeLabel label, string language) =>
+        language != "lv" && label.Translations is not null && label.Translations.TryGetValue(language, out var translation)
+            ? translation.Title
+            : label.Title;
 
     private static bool IsHelp(string folded)
     {

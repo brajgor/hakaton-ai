@@ -161,7 +161,7 @@ app.MapPost("/api/assistant/ask", async Task<Results<Ok<AssistantAnswer>, BadReq
             }
         }
 
-        return TypedResults.Ok(assistant.Answer(request.Question, context, request.Language));
+        return TypedResults.Ok(assistant.Answer(request.Question, context, "lv", lockLanguage: true));
     })
     .WithName("AskAssistant");
 
