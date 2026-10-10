@@ -17,7 +17,7 @@ It is not a legal permit issuer.
 ### Aspire
 
 ```bash
-cd vdaa-vai-drikstu
+cd hakaton-ai
 dotnet restore
 pnpm --dir web install
 dotnet run --project src/VaiDrikstu.AppHost
@@ -30,7 +30,7 @@ AppHost passes `--platform linux/amd64` for Apple Silicon compatibility.
 ### Docker Compose
 
 ```bash
-cd vdaa-vai-drikstu/infra
+cd hakaton-ai/infra
 docker compose up --build
 ```
 
@@ -51,6 +51,18 @@ pnpm --dir web dev
 - `Zvaigžņu` -> green case
 - `Pils laukums` -> cultural heritage yellow case
 - `Meža prospekts` -> protected nature yellow case
+
+The result depends on the selected action. For example, `Meža prospekts` gives
+yellow for solar panels or a small auxiliary building (DAP conditions), but green
+for changing windows, because the nature area status rarely affects facade work.
+
+## Rule table
+
+`src/VaiDrikstu.Domain/PrecheckRuleEngine.cs` contains `Rules`: one row per
+action × restriction with the likely procedure code (`NKMP_COORDINATION_LIKELY`,
+`DAP_CONDITIONS_LIKELY`, `MUNICIPAL_APPROVAL_LIKELY`) and the next step shown to
+the user. Every result also lists what was not checked (territorial planning,
+municipal binding regulations, encumbrances, co-owner consent).
 
 ## API
 
