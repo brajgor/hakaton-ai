@@ -204,3 +204,12 @@ pnpm --dir web build
 Docker Compose ir ieteicamais palaišanas veids. Aspire AppHost paliek risinājumā
 kā servisu izkārtojuma atsauce, bet šim datu smagajam MVP tas nav primārais
 orķestrators.
+
+## Coolify izvietošana
+
+Coolify izvietošanai izmantojiet `infra/docker-compose.coolify.yml`.
+Priekšgals tiek publicēts vienā domēnā un nginx konteinerī pārsūta `/api/*`
+pieprasījumus uz iekšējo API servisu. Datu imports ir nodalīts no parastā
+deploy, lai atkārtota izvietošana nepārrakstītu PostGIS datus.
+
+Soli pa solim skatiet [infra/COOLIFY.md](infra/COOLIFY.md).

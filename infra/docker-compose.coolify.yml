@@ -1,0 +1,96 @@
+services:
+  postgis:
+    image: postgis/postgis:17-3.5
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vaidrikstu}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES:-postgres}
+    volumes:
+      - postgis-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-vaidrikstu}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ..
+      dockerfile: src/VaiDrikstu.Api/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__vaidrikstu: Host=postgis;Port=5432;Database=${POSTGRES_DB:-vaidrikstu};Username=${POSTGRES_USER:-postgres};Password=${SERVICE_PASSWORD_POSTGRES:-postgres}
+    expose:
+      - "8080"
+    depends_on:
+      postgis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ..
+      dockerfile: web/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      - api
+
+  demo-seed:
+    image: postgis/postgis:17-3.5
+    profiles: ["demo"]
+    environment:
+      PGPASSWORD: ${SERVICE_PASSWORD_POSTGRES:-postgres}
+    volumes:
+      - ../data/demo:/demo:ro
+    depends_on:
+      postgis:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - psql -v ON_ERROR_STOP=1 -h postgis -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-vaidrikstu} -f /demo/seed.sql
+
+  geo-importer:
+    build:
+      context: ..
+      dockerfile: infra/geo-importer/Dockerfile
+    profiles: ["import"]
+    environment:
+      POSTGIS_DSN: PG:host=postgis port=5432 dbname=${POSTGRES_DB:-vaidrikstu} user=${POSTGRES_USER:-postgres} password=${SERVICE_PASSWORD_POSTGRES:-postgres}
+      DATA_SOURCES_PATH: /sources
+      DATA_RULE_SOURCES_PATH: /rule-data/external
+      IMPORT_PROFILE: ${IMPORT_PROFILE:-regional}
+      CADASTRE_ARCHIVE_PATTERN: ${CADASTRE_ARCHIVE_PATTERN:-.}
+      IMPORT_PARCELS: ${IMPORT_PARCELS:-true}
+    volumes:
+      - ${DATA_SOURCES_HOST_PATH:-/data/vaidrikstu/sources}:/sources:ro
+      - ${RULE_DATA_HOST_PATH:-/data/vaidrikstu/rule-data}:/rule-data:ro
+    depends_on:
+      postgis:
+        condition: service_healthy
+
+  data-importer:
+    build:
+      context: ..
+      dockerfile: src/VaiDrikstu.DataImporter/Dockerfile
+    profiles: ["import"]
+    environment:
+      ConnectionStrings__vaidrikstu: Host=postgis;Port=5432;Database=${POSTGRES_DB:-vaidrikstu};Username=${POSTGRES_USER:-postgres};Password=${SERVICE_PASSWORD_POSTGRES:-postgres}
+      DATA_SOURCES_PATH: /app/data/sources
+      DATA_RULE_SOURCES_PATH: /rule-data/external
+      IMPORT_PROFILE: ${IMPORT_PROFILE:-regional}
+      ADDRESS_SCOPE_TERMS: ${ADDRESS_SCOPE_TERMS:-Rīga,;Jūrmala,;Liepāja,;Daugavpils,;Valmiera,}
+    volumes:
+      - ${DATA_SOURCES_HOST_PATH:-/data/vaidrikstu/sources}:/app/data/sources:ro
+      - ${RULE_DATA_HOST_PATH:-/data/vaidrikstu/rule-data}:/rule-data:ro
+    depends_on:
+      geo-importer:
+        condition: service_completed_successfully
+
+volumes:
+  postgis-data:

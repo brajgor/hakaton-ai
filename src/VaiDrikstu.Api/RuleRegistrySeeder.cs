@@ -12,6 +12,40 @@ public static class RuleRegistrySeeder
 
         const string schema = """
             create extension if not exists postgis;
+            create extension if not exists pg_trgm;
+            create table if not exists addresses (
+                id text primary key,
+                normalized_address text not null,
+                ar_code text not null,
+                municipality text not null,
+                geom geometry(Point, 4326) not null
+            );
+            create table if not exists heritage_sites (
+                id text primary key,
+                name text not null,
+                type text not null,
+                status text not null,
+                source text not null,
+                cadastral_code text null,
+                geom geometry(Geometry, 4326) not null
+            );
+            create table if not exists nature_areas (
+                id text primary key,
+                name text not null,
+                category text not null,
+                source text not null,
+                geom geometry(Geometry, 4326) not null
+            );
+            create table if not exists precheck_runs (
+                request_id uuid primary key,
+                intent_id text not null,
+                address_id text null references addresses(id),
+                address_label text not null,
+                result_level text not null,
+                reason_codes jsonb not null,
+                result_json jsonb not null,
+                created_at timestamptz not null default now()
+            );
             create table if not exists legal_sources (
                 source_id text primary key,
                 title text not null,
@@ -67,7 +101,14 @@ public static class RuleRegistrySeeder
                 source_id text not null,
                 geom geometry(Geometry, 4326) not null
             );
+            alter table heritage_sites add column if not exists source text not null default 'unknown';
+            alter table heritage_sites add column if not exists cadastral_code text null;
+            alter table nature_areas alter column geom type geometry(Geometry, 4326);
             create index if not exists ix_spatial_flags_geom on spatial_flags using gist (geom);
+            create index if not exists ix_addresses_geom on addresses using gist (geom);
+            create index if not exists ix_addresses_search on addresses using gin (normalized_address gin_trgm_ops);
+            create index if not exists ix_heritage_sites_geom on heritage_sites using gist (geom);
+            create index if not exists ix_nature_areas_geom on nature_areas using gist (geom);
             alter table precheck_runs add column if not exists regulatory_status text not null default 'no_known_blocker';
             alter table precheck_runs add column if not exists coverage_warnings jsonb not null default '[]'::jsonb;
             alter table precheck_runs add column if not exists applied_rules jsonb not null default '[]'::jsonb;

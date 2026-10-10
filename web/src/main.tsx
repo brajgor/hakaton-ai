@@ -5,7 +5,7 @@ import texts from './i18n/lv.json';
 import { AssistantAnswer, AssistantPanel } from './Assistant';
 import './styles.css';
 
-const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
 type Intent = { id: string; title: string; description: string };
 type Address = {
