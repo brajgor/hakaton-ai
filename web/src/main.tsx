@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AlertTriangle, ArrowRight, CheckCircle2, Database, FileCheck2, Landmark, Loader2, MapPin, Search, ShieldCheck } from 'lucide-react';
 import texts from './i18n/lv.json';
+import { AssistantAnswer, AssistantPanel } from './Assistant';
 import './styles.css';
 
 const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -403,6 +404,7 @@ function SummaryStep({ result, selectedIntent, selectedAddress, session }: { res
         <p className="disclaimer">{result.officialDisclaimer}</p>
         <p className="muted">{texts.officialPath}</p>
       </div>
+      <AssistantPanel requestId={result.requestId} ask={askAssistant} />
     </>
   );
 }
@@ -469,6 +471,14 @@ function NextSteps({ steps }: { steps: string[] }) {
       </ol>
     </section>
   );
+}
+
+function askAssistant(question: string, requestId?: string): Promise<AssistantAnswer> {
+  return fetchJson<AssistantAnswer>('/api/assistant/ask', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ question, requestId, language: 'lv' }),
+  });
 }
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {

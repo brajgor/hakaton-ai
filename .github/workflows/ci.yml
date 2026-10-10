@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  dotnet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Build domain, API and tests
+        run: |
+          dotnet build src/VaiDrikstu.Api/VaiDrikstu.Api.csproj -c Release
+          dotnet build tests/VaiDrikstu.Domain.Tests/VaiDrikstu.Domain.Tests.csproj -c Release
+      - name: Test
+        run: dotnet test tests/VaiDrikstu.Domain.Tests/VaiDrikstu.Domain.Tests.csproj -c Release --no-build --logger "console;verbosity=normal" --logger "trx;LogFileName=results.trx" --results-directory TestResults
+      - name: Test summary
+        if: always()
+        shell: python
+        run: |
+          import glob, xml.etree.ElementTree as ET
+          ns = {"t": "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"}
+          files = glob.glob("TestResults/**/*.trx", recursive=True)
+          if not files:
+              print("::error title=Tests::No TRX results found")
+              raise SystemExit(1)
+          root = ET.parse(files[0]).getroot()
+          c = root.find(".//t:ResultSummary/t:Counters", ns).attrib
+          print(f"::notice title=Tests::total={c['total']} passed={c['passed']} failed={c['failed']}")
+          for r in root.findall(".//t:UnitTestResult", ns):
+              if r.get("outcome") != "Passed":
+                  msg = r.find(".//t:Message", ns)
+                  text = (msg.text if msg is not None else "").replace("\n", " ")[:900]
+                  print(f"::error title={r.get('testName')[:200]}::{text}")
+      - name: Assistant data is copied next to the API
+        run: test -f src/VaiDrikstu.Api/bin/Release/net10.0/assistant-data/labels.json
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm --dir web install --frozen-lockfile
+      - run: pnpm --dir web build
