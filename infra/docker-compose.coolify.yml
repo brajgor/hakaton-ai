@@ -16,7 +16,7 @@ services:
 
   api:
     build:
-      context: ..
+      context: .
       dockerfile: src/VaiDrikstu.Api/Dockerfile
     restart: unless-stopped
     environment:
@@ -30,7 +30,7 @@ services:
 
   web:
     build:
-      context: ..
+      context: .
       dockerfile: web/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-}
@@ -46,7 +46,7 @@ services:
     environment:
       PGPASSWORD: ${SERVICE_PASSWORD_POSTGRES:-postgres}
     volumes:
-      - ../data/demo:/demo:ro
+      - ./data/demo:/demo:ro
     depends_on:
       postgis:
         condition: service_healthy
@@ -57,7 +57,7 @@ services:
 
   geo-importer:
     build:
-      context: ..
+      context: .
       dockerfile: infra/geo-importer/Dockerfile
     profiles: ["import"]
     environment:
@@ -76,7 +76,7 @@ services:
 
   data-importer:
     build:
-      context: ..
+      context: .
       dockerfile: src/VaiDrikstu.DataImporter/Dockerfile
     profiles: ["import"]
     environment:

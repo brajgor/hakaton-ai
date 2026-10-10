@@ -8,7 +8,8 @@ This setup deploys `building-precheck` behind one public domain:
 - `postgis-data` is the only runtime persistent volume.
 - `demo-seed`, `geo-importer`, and `data-importer` are one-shot profile services.
 
-Use `docker-compose.coolify.yml` as the Coolify Docker Compose file.
+Use `infra/docker-compose.coolify.yml` as the Coolify Docker Compose file from
+the repository root.
 
 ## Runtime variables
 
@@ -81,3 +82,11 @@ curl -fsS https://hackaton2026.brajgor.dev/api/intents
 
 Open `https://hackaton2026.brajgor.dev` and search for an address included in
 the selected import scope.
+
+## Local validation
+
+From the repository root:
+
+```bash
+docker compose --project-directory . -f infra/docker-compose.coolify.yml config
+```
