@@ -347,6 +347,22 @@ button:disabled {
   font-size: 0.9rem;
 }
 
+.reasons {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.reasons li {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--brand);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #f8fafc;
+}
+
 .nextSteps {
   padding-left: 22px;
 }

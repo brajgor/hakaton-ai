@@ -4,6 +4,11 @@ set -euo pipefail
 : "${POSTGIS_DSN:?POSTGIS_DSN must be set}"
 SOURCE_ROOT="${DATA_SOURCES_PATH:-/sources}"
 WORK_DIR="/tmp/vai-drikstu-geo-import"
+# Optional scoping for faster local imports:
+#   CADASTRE_ARCHIVE_PATTERN - extended regex matched against cadastral archive paths (default: all)
+#   IMPORT_PARCELS           - set to "false" to keep already imported raw_cadastral_parcels
+ARCHIVE_PATTERN="${CADASTRE_ARCHIVE_PATTERN:-.}"
+IMPORT_PARCELS="${IMPORT_PARCELS:-true}"
 
 mkdir -p "$WORK_DIR"
 
@@ -90,14 +95,16 @@ import_cadastral_geometry() {
         -t_srs EPSG:4326 \
         -progress
     fi
-  done < <(find "$SOURCE_ROOT/data" -type f -name '*_kk_shp.zip' -print | sort)
+  done < <(find "$SOURCE_ROOT/data" -type f -name '*_kk_shp.zip' -print | grep -E "$ARCHIVE_PATTERN" | sort)
 }
 
 import_layer raw_nature_areas \
   "$SOURCE_ROOT/Ipasi_aizsargajamas_dabas_teritorijas/IADT_pamatteritorijas.shp" \
   IADT_pamatteritorijas
 
-import_cadastral_geometry raw_cadastral_parcels cadastral_parcels KKParcel
+if [ "$IMPORT_PARCELS" = "true" ]; then
+  import_cadastral_geometry raw_cadastral_parcels cadastral_parcels KKParcel
+fi
 import_cadastral_geometry raw_cadastral_parcel_parts cadastral_parcel_parts KKParcelPart
 
 import_layer raw_riga_zoning \

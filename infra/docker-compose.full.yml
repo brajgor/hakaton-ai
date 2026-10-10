@@ -23,6 +23,8 @@ services:
     environment:
       POSTGIS_DSN: PG:host=postgis port=5432 dbname=vaidrikstu user=postgres password=postgres
       DATA_SOURCES_PATH: /sources
+      CADASTRE_ARCHIVE_PATTERN: ${CADASTRE_ARCHIVE_PATTERN:-.}
+      IMPORT_PARCELS: ${IMPORT_PARCELS:-true}
     volumes:
       - ../.local-data/sources:/sources:ro
     depends_on:

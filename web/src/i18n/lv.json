@@ -24,7 +24,7 @@
   "green": "Atvērtajos datos ierobežojumi nav atrasti",
   "yellow": "Iespējama saskaņošana",
   "red": "Nepieciešama precizēšana",
-  "reasonCodes": "Pamatojuma kodi",
+  "reasonCodes": "Pamatojums",
   "nextSteps": "Kas jādara tālāk",
   "findings": "Datu atradumi",
   "session": "Demo sesija",
@@ -75,5 +75,17 @@
       }
     ],
     "startTitle": "Sāciet priekšpārbaudi"
+  },
+  "reasons": {
+    "ADDRESS_FOUND": "Adrese atrasta valsts adrešu datos.",
+    "ADDRESS_NOT_FOUND": "Adrese netika atrasta datos.",
+    "HERITAGE_SITE_INTERSECTS": "Adrese atrodas kultūras pieminekļa vai tā aizsardzības zonas teritorijā.",
+    "HERITAGE_SITE_NEARBY": "Tuvumā atrodas kultūras piemineklis.",
+    "NATURE_AREA_INTERSECTS": "Adrese atrodas īpaši aizsargājamā dabas teritorijā.",
+    "NO_RESTRICTION_FOUND_IN_OPEN_DATA": "Atvērtajos datos ierobežojumi netika atrasti.",
+    "OFFICIAL_REVIEW_REQUIRED": "Lēmumu pieņem kompetentā iestāde — nepieciešama oficiāla izvērtēšana.",
+    "NKMP_COORDINATION_LIKELY": "Darbību, visticamāk, nepieciešams saskaņot ar Nacionālo kultūras mantojuma pārvaldi.",
+    "DAP_CONDITIONS_LIKELY": "Darbībai, visticamāk, būs jāievēro Dabas aizsardzības pārvaldes nosacījumi.",
+    "MUNICIPAL_APPROVAL_LIKELY": "Darbībai, visticamāk, būs nepieciešama pašvaldības saskaņošana."
   }
 }

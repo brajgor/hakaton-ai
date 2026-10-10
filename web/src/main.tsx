@@ -443,14 +443,17 @@ function FindingList({ findings }: { findings: Finding[] }) {
 }
 
 function ReasonList({ codes }: { codes: string[] }) {
+  const reasons: Record<string, string> = texts.reasons;
   return (
     <section className="block">
       <h3>{texts.reasonCodes}</h3>
-      <div className="chips">
+      <ul className="reasons">
         {codes.map((code) => (
-          <span key={code}>{code}</span>
+          <li key={code} title={code}>
+            {reasons[code] ?? code}
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }
