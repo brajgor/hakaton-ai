@@ -70,7 +70,7 @@ function App() {
       const found = await fetchJson<Address[]>(`/api/addresses/search?q=${encodeURIComponent(query.trim())}`);
       setAddresses(found);
       if (found.length === 0) {
-        setMessage('Adrese netika atrasta demo datu izgriezumā.');
+        setMessage('Adrese netika atrasta ielādētajos atvērtajos datos.');
       }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Nezināma kļūda.');
@@ -422,7 +422,7 @@ function FindingList({ findings }: { findings: Finding[] }) {
     <section className="block">
       <h3>{texts.findings}</h3>
       {findings.length === 0 ? (
-        <p className="muted">Atrastie ierobežojumi nav konstatēti demo datu izgriezumā.</p>
+        <p className="muted">Ielādētajos atvērtajos datos ierobežojumi nav konstatēti.</p>
       ) : (
         <ul className="cards">
           {findings.map((finding) => (

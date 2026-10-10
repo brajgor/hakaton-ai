@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Npgsql;
+using NpgsqlTypes;
 
 var rawConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__vaidrikstu")
     ?? Environment.GetEnvironmentVariable("VAIDRIKSTU_CONNECTION_STRING")
@@ -14,9 +15,24 @@ var connectionString = new NpgsqlConnectionStringBuilder(rawConnectionString)
 var sourceRoot = Environment.GetEnvironmentVariable("DATA_SOURCES_PATH")
     ?? Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "sources"));
 var ruleDataRoot = Environment.GetEnvironmentVariable("DATA_RULE_SOURCES_PATH");
+var importProfile = Environment.GetEnvironmentVariable("IMPORT_PROFILE") ?? "national";
+var isRegionalProfile = string.Equals(importProfile, "regional", StringComparison.OrdinalIgnoreCase);
+var addressScopeTerms = (Environment.GetEnvironmentVariable("ADDRESS_SCOPE_TERMS") ?? string.Empty)
+    .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+if (!isRegionalProfile && !string.Equals(importProfile, "national", StringComparison.OrdinalIgnoreCase))
+{
+    throw new InvalidOperationException("IMPORT_PROFILE must be either 'national' or 'regional'.");
+}
+
+if (isRegionalProfile && addressScopeTerms.Length == 0)
+{
+    throw new InvalidOperationException("Regional import requires ADDRESS_SCOPE_TERMS.");
+}
 
 Console.WriteLine($"VaiDrikstu.DataImporter starting. Source root: {sourceRoot}");
 Console.WriteLine($"Rule-data root: {ruleDataRoot ?? "not configured"}");
+Console.WriteLine($"Import profile: {importProfile}. Address scope: {(addressScopeTerms.Length == 0 ? "nationwide" : string.Join(", ", addressScopeTerms))}");
 
 var files = SourceFiles.From(sourceRoot);
 files.Validate();
@@ -25,12 +41,19 @@ await using var connection = new NpgsqlConnection(connectionString);
 await connection.OpenAsync();
 
 await EnsureSchemaAsync(connection);
-await EnsureSpatialImportSucceededAsync(connection);
-await ImportAddressesAsync(connection, files.AddressRegistry);
-await ImportHeritageRegistryAsync(connection, files.HeritageRegistry);
+await EnsureSpatialImportSucceededAsync(connection, isRegionalProfile);
+await ImportAddressesAsync(connection, files.AddressRegistry, addressScopeTerms);
 await ImportPlanningRegionsAsync(connection, files.PlanningRegions);
-await ImportLandEncumbrancesAsync(connection, files.ParcelEncumbrances, files.ParcelPartEncumbrances);
-await RefreshDerivedDataAsync(connection);
+if (isRegionalProfile)
+{
+    await RefreshRegionalDerivedDataAsync(connection, addressScopeTerms);
+}
+else
+{
+    await ImportHeritageRegistryAsync(connection, files.HeritageRegistry);
+    await ImportLandEncumbrancesAsync(connection, files.ParcelEncumbrances, files.ParcelPartEncumbrances);
+    await RefreshDerivedDataAsync(connection);
+}
 await ImportSupplementalSpatialFlagsAsync(connection, ruleDataRoot);
 await PrintImportSummaryAsync(connection);
 
@@ -193,14 +216,20 @@ static async Task EnsureSchemaAsync(NpgsqlConnection connection)
     await ExecuteAsync(connection, sql);
 }
 
-static async Task EnsureSpatialImportSucceededAsync(NpgsqlConnection connection)
+static async Task EnsureSpatialImportSucceededAsync(NpgsqlConnection connection, bool isRegionalProfile)
 {
-    foreach (var table in new[]
-             {
-                 "raw_nature_areas", "raw_cadastral_parcels", "raw_cadastral_parcel_parts",
-                 "raw_riga_zoning", "raw_riga_encumbrances", "raw_rvc_core",
-                 "raw_rvc_protection", "raw_rvc_character_areas"
-             })
+    var requiredTables = new List<string>
+    {
+        "raw_nature_areas", "raw_riga_zoning", "raw_riga_encumbrances", "raw_rvc_core",
+        "raw_rvc_protection", "raw_rvc_character_areas"
+    };
+
+    if (!isRegionalProfile)
+    {
+        requiredTables.AddRange(["raw_cadastral_parcels", "raw_cadastral_parcel_parts"]);
+    }
+
+    foreach (var table in requiredTables)
     {
         await using var command = new NpgsqlCommand("select to_regclass(@table) is not null;", connection);
         command.Parameters.AddWithValue("table", table);
@@ -209,6 +238,17 @@ static async Task EnsureSpatialImportSucceededAsync(NpgsqlConnection connection)
             throw new InvalidOperationException(
                 $"Missing '{table}'. The geo-importer must complete successfully before DataImporter starts.");
         }
+    }
+
+    if (isRegionalProfile)
+    {
+        await ExecuteAsync(connection, """
+            drop table if exists raw_cadastral_parcels;
+            drop table if exists raw_cadastral_parcel_parts;
+            truncate table raw_heritage_registry, raw_land_encumbrances, raw_land_encumbrance_parts;
+            """);
+        Console.WriteLine("Regional profile: skipping national cadastral geometry and encumbrance imports.");
+        return;
     }
 
     await ExecuteAsync(connection, """
@@ -226,7 +266,7 @@ static async Task EnsureSpatialImportSucceededAsync(NpgsqlConnection connection)
     }
 }
 
-static async Task ImportAddressesAsync(NpgsqlConnection connection, string path)
+static async Task ImportAddressesAsync(NpgsqlConnection connection, string path, IReadOnlyList<string> scopeTerms)
 {
     await ExecuteAsync(connection, "truncate table precheck_runs, address_parcels, heritage_sites, nature_areas, spatial_flags, land_encumbrances, planning_zones, planning_overlays, administrative_regions, source_catalog, addresses, raw_addresses;");
     await CopyCsvAsync(connection, "raw_addresses", path, ',');
@@ -239,6 +279,10 @@ static async Task ImportAddressesAsync(NpgsqlConnection connection, string path)
             kods,
             case
                 when std ilike '%, Rīga%' then 'Rīga'
+                when std ilike '%, Jūrmala%' then 'Jūrmala'
+                when std ilike '%, Daugavpils%' then 'Daugavpils'
+                when std ilike '%, Liepāja%' then 'Liepāja'
+                when std ilike '%, Valmiera%' then 'Valmiera'
                 when std ~ ',\s*[^,]+ nov\.' then (regexp_match(std, ',\s*([^,]+ nov\.)'))[1]
                 else 'Latvija'
             end,
@@ -247,17 +291,30 @@ static async Task ImportAddressesAsync(NpgsqlConnection connection, string path)
         where statuss = 'EKS'
           and apstipr = 'Y'
           and nullif(dd_n, '')::double precision between 55 and 59
-          and nullif(dd_e, '')::double precision between 20 and 29;
+          and nullif(dd_e, '')::double precision between 20 and 29
         """;
 
-    await ExecuteAsync(connection, sql);
-    var count = await CountAsync(connection, "addresses");
-    if (count < 100_000)
+    var scopeClause = scopeTerms.Count == 0 ? ";" : " and std ilike any(@scopePatterns);";
+    await using (var command = new NpgsqlCommand(sql + scopeClause, connection))
     {
-        throw new InvalidOperationException($"Address import produced only {count} records; expected official national VZD data.");
+        if (scopeTerms.Count > 0)
+        {
+            command.Parameters.AddWithValue(
+                "scopePatterns",
+                NpgsqlDbType.Array | NpgsqlDbType.Text,
+                scopeTerms.Select(term => $"%{term}%").ToArray());
+        }
+
+        await command.ExecuteNonQueryAsync();
+    }
+    var count = await CountAsync(connection, "addresses");
+    var minimumExpected = scopeTerms.Count == 0 ? 100_000 : 1_000;
+    if (count < minimumExpected)
+    {
+        throw new InvalidOperationException($"Address import produced only {count} records; expected at least {minimumExpected} official VZD addresses.");
     }
 
-    Console.WriteLine($"Imported {count:N0} official VZD addresses.");
+    Console.WriteLine($"Imported {count:N0} official VZD addresses{(scopeTerms.Count == 0 ? string.Empty : " in the configured regional scope")}.");
 }
 
 static async Task ImportHeritageRegistryAsync(NpgsqlConnection connection, string path)
@@ -490,6 +547,117 @@ static async Task RefreshDerivedDataAsync(NpgsqlConnection connection)
     }
 }
 
+static async Task RefreshRegionalDerivedDataAsync(NpgsqlConnection connection, IReadOnlyList<string> scopeTerms)
+{
+    const string sql = """
+        -- step
+        insert into nature_areas (id, name, category, source, geom)
+        select
+            'IADT:' || id::text,
+            coalesce(nullif(name, ''), 'Īpaši aizsargājama dabas teritorija'),
+            coalesce(nullif(category, ''), 'Nav norādīta kategorija'),
+            'DAP / ĢeoLatvija IADT',
+            st_makevalid(geom)
+        from raw_nature_areas
+        where geom is not null and not st_isempty(geom);
+
+        -- step
+        insert into planning_zones (id, area_name, zone_code, floors, source, geom)
+        select
+            'RTP-FZ:' || fid::text,
+            'Rīgas teritorijas plānojuma funkcionālais zonējums',
+            planotais_,
+            "stāvi",
+            'Rīgas valstspilsētas pašvaldība',
+            st_makevalid(geom)
+        from raw_riga_zoning
+        where geom is not null and not st_isempty(geom);
+
+        -- step
+        insert into spatial_flags (id, flag_type, name, category, source_id, geom)
+        select
+            'planning-zone:' || id,
+            'planning_zone',
+            area_name,
+            coalesce(zone_code, 'Nav norādīts'),
+            'riga-territory-plan',
+            geom
+        from planning_zones;
+
+        -- step
+        insert into planning_overlays (id, name, category, source, geom)
+        select 'RTP-ENC:' || fid::text,
+               coalesce(nullif(veids, ''), 'Teritorija ar apgrūtinājumu'),
+               coalesce(nullif(grupa_nos, ''), nullif(kods, ''), 'Nav norādīta grupa'),
+               'Rīgas valstspilsētas pašvaldība',
+               st_makevalid(geom)
+        from raw_riga_encumbrances
+        where geom is not null and not st_isempty(geom);
+
+        -- step
+        insert into planning_overlays (id, name, category, source, geom)
+        select 'RVC-7442:' || objectid::text,
+               'Rīgas vēsturiskais centrs',
+               'RVC robeža',
+               'Rīgas vēsturiskā centra un tā aizsardzības zonas teritorijas plānojums',
+               st_makevalid(geom)
+        from raw_rvc_core;
+
+        -- step
+        insert into planning_overlays (id, name, category, source, geom)
+        select 'RVC-8327:' || objectid::text,
+               'Rīgas vēsturiskā centra aizsardzības zona',
+               'RVC aizsardzības zona',
+               'Rīgas vēsturiskā centra un tā aizsardzības zonas teritorijas plānojums',
+               st_makevalid(geom)
+        from raw_rvc_protection;
+
+        -- step
+        insert into planning_overlays (id, name, category, source, geom)
+        select 'RVC-CHAR:' || objectid::text,
+               'Kultūrvēsturiski nozīmīga autentiska pilsētvides teritorija',
+               'RVC apbūves veidošanas pamatnosacījumi',
+               'Rīgas vēsturiskā centra un tā aizsardzības zonas teritorijas plānojums',
+               st_makevalid(geom)
+        from raw_rvc_character_areas;
+
+        -- step
+        insert into administrative_regions (planning_region, administrative_territory)
+        select distinct trim(planning_region), trim(administrative_territory)
+        from raw_planning_regions
+        where nullif(trim(planning_region), '') is not null
+          and nullif(trim(administrative_territory), '') is not null;
+
+        -- step
+        insert into source_catalog (source_key, publisher, dataset_name, local_path, coverage, imported_rows, import_mode, notes)
+        values
+            ('vzd-addresses', 'Valsts zemes dienests', 'Valsts adrešu reģistra atvērtie dati', 'data/aw_eka.csv', 'Konfigurēts reģionāls izgriezums', (select count(*) from addresses), 'regional', 'Adrešu punktu izgriezums ātram MVP; valsts mēroga kadastrs nav ielādēts.'),
+            ('dap-iadt', 'Dabas aizsardzības pārvalde / ĢeoLatvija', 'Īpaši aizsargājamās dabas teritorijas', 'Ipasi_aizsargajamas_dabas_teritorijas/IADT_pamatteritorijas.shp', 'Latvija', (select count(*) from nature_areas), 'loaded', 'Poligoni pārveidoti uz EPSG:4326.'),
+            ('riga-territory-plan', 'Rīgas valstspilsētas pašvaldība', 'Rīgas teritorijas plānojums', 'downloaded/rigas-teritorijas-planojums', 'Rīga', (select count(*) from planning_zones), 'loaded', 'Funkcionālais zonējums un teritorijas ar apgrūtinājumiem.'),
+            ('rvc-territory-plan', 'Rīgas valstspilsētas pašvaldība', 'Rīgas vēsturiskā centra un tā aizsardzības zonas teritorijas plānojums', 'downloaded/rigas-vesturiskais-centrs', 'Rīga', (select count(*) from planning_overlays where source like 'Rīgas vēsturiskā centra%'), 'loaded', 'RVC, aizsardzības zonas un pilsētvides teritorijas.'),
+            ('vzd-cadastre', 'Valsts zemes dienests', 'Kadastra informācijas sistēmas atvērtie telpiskie dati', 'data/*_kk_shp.zip', 'Nav ielādēts regional profilā', null, 'not-loaded', 'Ātrā profila ierobežojums: nav kadastra ģeometrijas, apgrūtinājumu un ar kadastru sasaistītā NKMP slāņa.'),
+            ('tapis-wfs', 'Viedās administrācijas un reģionālās attīstības ministrija', 'TAPIS ģeotelpiskie dati WFS', 'downloaded/tapis', 'Daļējs Rīgas WFS izraksts', null, 'reference-only', 'WFS izraksts ir nepilnīgs, tāpēc netiek izmantots automātiskā pārbaudē.')
+        on conflict (source_key) do update set
+            publisher = excluded.publisher,
+            dataset_name = excluded.dataset_name,
+            local_path = excluded.local_path,
+            coverage = excluded.coverage,
+            imported_rows = excluded.imported_rows,
+            import_mode = excluded.import_mode,
+            notes = excluded.notes,
+            imported_at = now();
+        """;
+
+    var steps = sql.Split("-- step", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    for (var index = 0; index < steps.Length; index++)
+    {
+        Console.WriteLine($"Refreshing regional data step {index + 1}/{steps.Length}.");
+        await ExecuteAsync(connection, steps[index]);
+    }
+
+    Console.WriteLine($"Regional address scope refreshed: {string.Join(", ", scopeTerms)}.");
+}
+
 static async Task PrintImportSummaryAsync(NpgsqlConnection connection)
 {
     var tables = new[]
@@ -501,7 +669,9 @@ static async Task PrintImportSummaryAsync(NpgsqlConnection connection)
 
     foreach (var table in tables)
     {
-        Console.WriteLine($"{table}: {await CountAsync(connection, table):N0}");
+        Console.WriteLine(await RelationExistsAsync(connection, table)
+            ? $"{table}: {await CountAsync(connection, table):N0}"
+            : $"{table}: not loaded");
     }
 }
 

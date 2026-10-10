@@ -40,7 +40,7 @@
     "feature3Text": "Saņemiet pamatotu rezultātu un norādi, kas jādara tālāk oficiālajā saskaņošanā.",
     "start": "Sākt priekšpārbaudi",
     "dataTitle": "Kādus datus izmantojam",
-    "dataLead": "Priekšpārbaude salīdzina adresi ar atvērtajiem datiem. Šobrīd prototipā tiek izmantots neliels demonstrācijas datu izgriezums; datu apraksts tiks papildināts, pievienojot reālās datu kopas.",
+    "dataLead": "Priekšpārbaude salīdzina adresi ar ielādētiem atvērto datu slāņiem. Datu apjoms ir atkarīgs no izvēlētā lokālā importa profila.",
     "data": [
       {
         "title": "Adrešu dati",

@@ -65,6 +65,27 @@ minutes and needs roughly 2 GB of local disk data. Both local source folders
 are Git-ignored and mounted read-only; they never enter a Docker build context
 or GitHub.
 
+### Fast regional import
+
+For a presentation where nationwide cadastral geometry is unnecessary, use the
+same stack in `regional` mode. It loads all addresses matching the chosen city
+fragments, DAP protected areas, and the Rīga planning/red-line/protection-zone
+layers, while deliberately skipping the slow national cadastral archives and
+encumbrance CSVs:
+
+```bash
+cd building-precheck/infra
+docker compose \
+  -f docker-compose.full.yml \
+  -f docker-compose.regional.yml \
+  up --build
+```
+
+The API marks the missing cadastral/NKMP linkage in `source_catalog`. The fast
+profile is suitable for address search and the listed spatial flags; it is not
+a substitute for the national profile. To alter the selected cities, pass
+`ADDRESS_SCOPE_TERMS='Rīga,;Cēsis,;Sigulda,'` before the command.
+
 ## Real-data checks and rule registry
 
 `src/VaiDrikstu.Domain/RuleCatalog.cs` is the reviewed, versioned MVP catalog.

@@ -1,0 +1,9 @@
+services:
+  geo-importer:
+    environment:
+      IMPORT_PROFILE: regional
+
+  data-importer:
+    environment:
+      IMPORT_PROFILE: regional
+      ADDRESS_SCOPE_TERMS: ${ADDRESS_SCOPE_TERMS:-Rīga,;Jūrmala,;Liepāja,;Daugavpils,;Valmiera,}

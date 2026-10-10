@@ -26,6 +26,7 @@ services:
       CADASTRE_ARCHIVE_PATTERN: ${CADASTRE_ARCHIVE_PATTERN:-.}
       IMPORT_PARCELS: ${IMPORT_PARCELS:-true}
       DATA_RULE_SOURCES_PATH: /rule-data/external
+      IMPORT_PROFILE: ${IMPORT_PROFILE:-national}
     volumes:
       - ../.local-data/sources:/sources:ro
       - ../new_data:/rule-data:ro
@@ -41,6 +42,8 @@ services:
       ConnectionStrings__vaidrikstu: Host=postgis;Port=5432;Database=vaidrikstu;Username=postgres;Password=postgres
       DATA_SOURCES_PATH: /app/data/sources
       DATA_RULE_SOURCES_PATH: /rule-data/external
+      IMPORT_PROFILE: ${IMPORT_PROFILE:-national}
+      ADDRESS_SCOPE_TERMS: ${ADDRESS_SCOPE_TERMS:-}
     volumes:
       - ../.local-data/sources:/app/data/sources:ro
       - ../new_data:/rule-data:ro

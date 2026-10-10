@@ -4,6 +4,7 @@ set -euo pipefail
 : "${POSTGIS_DSN:?POSTGIS_DSN must be set}"
 SOURCE_ROOT="${DATA_SOURCES_PATH:-/sources}"
 RULE_DATA_ROOT="${DATA_RULE_SOURCES_PATH:-}"
+IMPORT_PROFILE="${IMPORT_PROFILE:-national}"
 WORK_DIR="/tmp/vai-drikstu-geo-import"
 # Optional scoping for faster local imports:
 #   CADASTRE_ARCHIVE_PATTERN - extended regex matched against cadastral archive paths (default: all)
@@ -103,10 +104,19 @@ import_layer raw_nature_areas \
   "$SOURCE_ROOT/Ipasi_aizsargajamas_dabas_teritorijas/IADT_pamatteritorijas.shp" \
   IADT_pamatteritorijas
 
-if [ "$IMPORT_PARCELS" = "true" ]; then
-  import_cadastral_geometry raw_cadastral_parcels cadastral_parcels KKParcel
+if [ "$IMPORT_PROFILE" = "regional" ]; then
+  echo "Regional profile: skipping national cadastral parcel and parcel-part imports."
+elif [ "$IMPORT_PROFILE" = "national" ]; then
+  if [ "$IMPORT_PARCELS" = "true" ]; then
+    import_cadastral_geometry raw_cadastral_parcels cadastral_parcels KKParcel
+  else
+    echo "IMPORT_PARCELS=false: keeping existing raw_cadastral_parcels."
+  fi
+  import_cadastral_geometry raw_cadastral_parcel_parts cadastral_parcel_parts KKParcelPart
+else
+  echo "Unknown IMPORT_PROFILE '$IMPORT_PROFILE'. Expected national or regional." >&2
+  exit 1
 fi
-import_cadastral_geometry raw_cadastral_parcel_parts cadastral_parcel_parts KKParcelPart
 
 import_layer raw_riga_zoning \
   "$SOURCE_ROOT/downloaded/rigas-teritorijas-planojums/extracted/funkcionalais_zonejums.gpkg" \
