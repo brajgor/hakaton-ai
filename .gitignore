@@ -7,3 +7,7 @@ dist/
 *.user
 *.suo
 *.tsbuildinfo
+
+# IDE
+.idea/
+.vs/
