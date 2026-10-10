@@ -9,6 +9,7 @@
 **/*.tsbuildinfo
 data/sources/
 .local-data/
+new_data/
 .git/
 .idea/
 .vscode/

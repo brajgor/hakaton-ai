@@ -13,6 +13,7 @@ dist/
 .local-data/
 data/sources/
 data/sources.zip
+new_data/
 
 # IDE
 .idea/

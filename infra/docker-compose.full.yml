@@ -25,8 +25,10 @@ services:
       DATA_SOURCES_PATH: /sources
       CADASTRE_ARCHIVE_PATTERN: ${CADASTRE_ARCHIVE_PATTERN:-.}
       IMPORT_PARCELS: ${IMPORT_PARCELS:-true}
+      DATA_RULE_SOURCES_PATH: /rule-data/external
     volumes:
       - ../.local-data/sources:/sources:ro
+      - ../new_data:/rule-data:ro
     depends_on:
       postgis:
         condition: service_healthy
@@ -38,8 +40,10 @@ services:
     environment:
       ConnectionStrings__vaidrikstu: Host=postgis;Port=5432;Database=vaidrikstu;Username=postgres;Password=postgres
       DATA_SOURCES_PATH: /app/data/sources
+      DATA_RULE_SOURCES_PATH: /rule-data/external
     volumes:
       - ../.local-data/sources:/app/data/sources:ro
+      - ../new_data:/rule-data:ro
     depends_on:
       geo-importer:
         condition: service_completed_successfully

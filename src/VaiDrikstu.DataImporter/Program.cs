@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Npgsql;
 
 var rawConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__vaidrikstu")
@@ -12,8 +13,10 @@ var connectionString = new NpgsqlConnectionStringBuilder(rawConnectionString)
 
 var sourceRoot = Environment.GetEnvironmentVariable("DATA_SOURCES_PATH")
     ?? Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "sources"));
+var ruleDataRoot = Environment.GetEnvironmentVariable("DATA_RULE_SOURCES_PATH");
 
 Console.WriteLine($"VaiDrikstu.DataImporter starting. Source root: {sourceRoot}");
+Console.WriteLine($"Rule-data root: {ruleDataRoot ?? "not configured"}");
 
 var files = SourceFiles.From(sourceRoot);
 files.Validate();
@@ -28,6 +31,7 @@ await ImportHeritageRegistryAsync(connection, files.HeritageRegistry);
 await ImportPlanningRegionsAsync(connection, files.PlanningRegions);
 await ImportLandEncumbrancesAsync(connection, files.ParcelEncumbrances, files.ParcelPartEncumbrances);
 await RefreshDerivedDataAsync(connection);
+await ImportSupplementalSpatialFlagsAsync(connection, ruleDataRoot);
 await PrintImportSummaryAsync(connection);
 
 Console.WriteLine("VaiDrikstu.DataImporter completed.");
@@ -157,9 +161,23 @@ static async Task EnsureSchemaAsync(NpgsqlConnection connection)
             created_at timestamptz not null default now()
         );
 
+        create table if not exists spatial_flags (
+            id text primary key,
+            flag_type text not null,
+            name text not null,
+            category text not null,
+            source_id text not null,
+            geom geometry(Geometry, 4326) not null
+        );
+
         alter table heritage_sites add column if not exists source text not null default 'unknown';
         alter table heritage_sites add column if not exists cadastral_code text null;
         alter table nature_areas alter column geom type geometry(Geometry, 4326);
+        alter table precheck_runs add column if not exists regulatory_status text not null default 'no_known_blocker';
+        alter table precheck_runs add column if not exists coverage_warnings jsonb not null default '[]'::jsonb;
+        alter table precheck_runs add column if not exists applied_rules jsonb not null default '[]'::jsonb;
+        alter table precheck_runs add column if not exists project_parameters jsonb not null default '{}'::jsonb;
+        alter table precheck_runs add column if not exists checked_on date not null default current_date;
 
         create index if not exists ix_addresses_geom on addresses using gist (geom);
         create index if not exists ix_addresses_search on addresses using gin (normalized_address gin_trgm_ops);
@@ -169,6 +187,7 @@ static async Task EnsureSchemaAsync(NpgsqlConnection connection)
         create index if not exists ix_address_parcels_address_id on address_parcels(address_id);
         create index if not exists ix_planning_zones_geom on planning_zones using gist (geom);
         create index if not exists ix_planning_overlays_geom on planning_overlays using gist (geom);
+        create index if not exists ix_spatial_flags_geom on spatial_flags using gist (geom);
         """;
 
     await ExecuteAsync(connection, sql);
@@ -209,7 +228,7 @@ static async Task EnsureSpatialImportSucceededAsync(NpgsqlConnection connection)
 
 static async Task ImportAddressesAsync(NpgsqlConnection connection, string path)
 {
-    await ExecuteAsync(connection, "truncate table precheck_runs, address_parcels, heritage_sites, nature_areas, land_encumbrances, planning_zones, planning_overlays, administrative_regions, source_catalog, addresses, raw_addresses;");
+    await ExecuteAsync(connection, "truncate table precheck_runs, address_parcels, heritage_sites, nature_areas, spatial_flags, land_encumbrances, planning_zones, planning_overlays, administrative_regions, source_catalog, addresses, raw_addresses;");
     await CopyCsvAsync(connection, "raw_addresses", path, ',');
 
     const string sql = """
@@ -385,6 +404,17 @@ static async Task RefreshDerivedDataAsync(NpgsqlConnection connection)
         where geom is not null and not st_isempty(geom);
 
         -- step
+        insert into spatial_flags (id, flag_type, name, category, source_id, geom)
+        select
+            'planning-zone:' || id,
+            'planning_zone',
+            area_name,
+            coalesce(zone_code, 'Nav norādīts'),
+            'riga-territory-plan',
+            geom
+        from planning_zones;
+
+        -- step
         insert into planning_overlays (id, name, category, source, geom)
         select 'RTP-ENC:' || fid::text,
                coalesce(nullif(veids, ''), 'Teritorija ar apgrūtinājumu'),
@@ -466,13 +496,121 @@ static async Task PrintImportSummaryAsync(NpgsqlConnection connection)
     {
         "addresses", "nature_areas", "raw_cadastral_parcels", "raw_cadastral_parcel_parts",
         "heritage_sites", "land_encumbrances", "address_parcels", "planning_zones", "planning_overlays",
-        "administrative_regions"
+        "administrative_regions", "spatial_flags"
     };
 
     foreach (var table in tables)
     {
         Console.WriteLine($"{table}: {await CountAsync(connection, table):N0}");
     }
+}
+
+static async Task ImportSupplementalSpatialFlagsAsync(NpgsqlConnection connection, string? ruleDataRoot)
+{
+    if (string.IsNullOrWhiteSpace(ruleDataRoot) || !Directory.Exists(ruleDataRoot))
+    {
+        Console.WriteLine("Supplemental Rīga rule data not available; retaining core nationwide findings.");
+        return;
+    }
+
+    var layerDirectory = Path.Combine(ruleDataRoot, "02-additional-geodata", "12-riga-protection-zones-arcgis");
+    var layers = new[]
+    {
+        new SpatialLayer(3, "heritage_protection_zone", "Individuālā aizsardzības zona ap kultūras pieminekli"),
+        new SpatialLayer(4, "heritage_protection_zone", "Aizsargjosla ap kultūras pieminekli"),
+        new SpatialLayer(6, "urban_heritage_monument", "Valsts aizsargājams pilsētbūvniecības piemineklis"),
+        new SpatialLayer(7, "cultural_historic_territory", "Kultūrvēsturiskā teritorija"),
+        new SpatialLayer(9, "coastal_protection_zone", "Jūras aizsargjosla"),
+        new SpatialLayer(10, "coastal_protection_zone", "Krasta kāpu aizsargjosla"),
+        new SpatialLayer(57, "building_protection_area", "Apbūves aizsardzības teritorija"),
+        new SpatialLayer(58, "microreserve", "Mikroliegums"),
+        new SpatialLayer(59, "protected_nature_area", "Īpaši aizsargājama dabas teritorija"),
+        new SpatialLayer(60, "flood_risk", "Applūšanas riska teritorija")
+    };
+
+    foreach (var layer in layers)
+    {
+        var files = Directory.GetFiles(layerDirectory, $"layer-{layer.Id:D2}-*.geojson");
+        if (files.Length != 1)
+        {
+            Console.WriteLine($"Skipping rule layer {layer.Id}: expected one GeoJSON export, found {files.Length}.");
+            continue;
+        }
+
+        using var stream = File.OpenRead(files[0]);
+        using var document = await JsonDocument.ParseAsync(stream);
+        var featureIndex = 0;
+        foreach (var feature in document.RootElement.GetProperty("features").EnumerateArray())
+        {
+            if (!feature.TryGetProperty("geometry", out var geometry) || geometry.ValueKind == JsonValueKind.Null)
+            {
+                continue;
+            }
+
+            featureIndex++;
+            var name = ReadFeatureName(feature, layer.Name);
+            await using var command = new NpgsqlCommand("""
+                insert into spatial_flags (id, flag_type, name, category, source_id, geom)
+                values (@id, @flagType, @name, @category, 'riga-protection-zones',
+                        st_setsrid(st_makevalid(st_geomfromgeojson(@geometry)), 4326))
+                on conflict (id) do update set
+                    flag_type = excluded.flag_type,
+                    name = excluded.name,
+                    category = excluded.category,
+                    geom = excluded.geom;
+                """, connection);
+            command.Parameters.AddWithValue("id", $"riga-protection:{layer.Id}:{featureIndex}");
+            command.Parameters.AddWithValue("flagType", layer.FlagType);
+            command.Parameters.AddWithValue("name", name);
+            command.Parameters.AddWithValue("category", layer.Name);
+            command.Parameters.AddWithValue("geometry", geometry.GetRawText());
+            await command.ExecuteNonQueryAsync();
+        }
+
+        Console.WriteLine($"Imported {featureIndex:N0} spatial flags from {Path.GetFileName(files[0])}.");
+    }
+
+    var hasRedLines = await RelationExistsAsync(connection, "raw_riga_red_lines");
+    if (hasRedLines)
+    {
+        await ExecuteAsync(connection, """
+            insert into spatial_flags (id, flag_type, name, category, source_id, geom)
+            select
+                'riga-red-line:' || row_number() over (),
+                'red_line',
+                'Rīgas ielas sarkanā līnija',
+                'Sarkanā līnija',
+                'riga-red-lines',
+                st_makevalid(geom)
+            from raw_riga_red_lines
+            where geom is not null and not st_isempty(geom);
+            """);
+    }
+}
+
+static string ReadFeatureName(JsonElement feature, string fallback)
+{
+    if (!feature.TryGetProperty("properties", out var properties) || properties.ValueKind != JsonValueKind.Object)
+    {
+        return fallback;
+    }
+
+    foreach (var key in new[] { "NAME", "name", "title", "ZoneName", "kods", "Kods" })
+    {
+        if (properties.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(value.GetString()))
+        {
+            return value.GetString()!;
+        }
+    }
+
+    return fallback;
+}
+
+static async Task<bool> RelationExistsAsync(NpgsqlConnection connection, string table)
+{
+    await using var command = new NpgsqlCommand("select to_regclass(@table) is not null;", connection);
+    command.Parameters.AddWithValue("table", table);
+    return await command.ExecuteScalarAsync() is true;
 }
 
 static async Task CopyCsvAsync(NpgsqlConnection connection, string table, string path, char delimiter)
@@ -500,6 +638,8 @@ static async Task ExecuteAsync(NpgsqlConnection connection, string sql)
     await using var command = new NpgsqlCommand(sql, connection);
     await command.ExecuteNonQueryAsync();
 }
+
+sealed record SpatialLayer(int Id, string FlagType, string Name);
 
 sealed record SourceFiles(
     string AddressRegistry,

@@ -3,6 +3,7 @@ set -euo pipefail
 
 : "${POSTGIS_DSN:?POSTGIS_DSN must be set}"
 SOURCE_ROOT="${DATA_SOURCES_PATH:-/sources}"
+RULE_DATA_ROOT="${DATA_RULE_SOURCES_PATH:-}"
 WORK_DIR="/tmp/vai-drikstu-geo-import"
 # Optional scoping for faster local imports:
 #   CADASTRE_ARCHIVE_PATTERN - extended regex matched against cadastral archive paths (default: all)
@@ -126,5 +127,13 @@ import_layer raw_rvc_protection \
 import_layer raw_rvc_character_areas \
   "$SOURCE_ROOT/downloaded/rigas-vesturiskais-centrs/extracted/Apbuves_veidosanas_pamatnosacijumi.gpkg" \
   Kulturvesturiski_nozimiga_autentiska_pilsetvides_teritorija
+
+if [ -n "$RULE_DATA_ROOT" ] && [ -f "$RULE_DATA_ROOT/02-additional-geodata/08-rigas-ielu-sarkanas-linijas/190222f4__sarkanas_linijas.gpkg" ]; then
+  import_layer raw_riga_red_lines \
+    "$RULE_DATA_ROOT/02-additional-geodata/08-rigas-ielu-sarkanas-linijas/190222f4__sarkanas_linijas.gpkg" \
+    sarkanas_linijas
+else
+  echo "Rīga red-line GeoPackage not available; skipping supplemental red-line import."
+fi
 
 echo "Geospatial import completed."

@@ -20,6 +20,7 @@ public sealed class PrecheckRuleEngineTests
         var decision = PrecheckRuleEngine.Evaluate(Intent, null, []);
 
         Assert.Equal(ResultLevels.Red, decision.Level);
+        Assert.Equal(RegulatoryStatuses.InsufficientData, decision.RegulatoryStatus);
         Assert.Contains(ReasonCodes.AddressNotFound, decision.ReasonCodes);
         Assert.Contains(ReasonCodes.OfficialReviewRequired, decision.ReasonCodes);
         Assert.Contains("priekšpārbaude", decision.OfficialDisclaimer);
@@ -33,6 +34,7 @@ public sealed class PrecheckRuleEngineTests
         ]);
 
         Assert.Equal(ResultLevels.Yellow, decision.Level);
+        Assert.Equal(RegulatoryStatuses.ManualReviewRequired, decision.RegulatoryStatus);
         Assert.Contains(ReasonCodes.AddressFound, decision.ReasonCodes);
         Assert.Contains(ReasonCodes.HeritageSiteIntersects, decision.ReasonCodes);
         Assert.Contains(ReasonCodes.OfficialReviewRequired, decision.ReasonCodes);
@@ -46,6 +48,7 @@ public sealed class PrecheckRuleEngineTests
         ]);
 
         Assert.Equal(ResultLevels.Yellow, decision.Level);
+        Assert.Equal(RegulatoryStatuses.ConditionsApply, decision.RegulatoryStatus);
         Assert.Contains(ReasonCodes.NatureAreaIntersects, decision.ReasonCodes);
         Assert.Contains(ReasonCodes.OfficialReviewRequired, decision.ReasonCodes);
     }
@@ -56,6 +59,7 @@ public sealed class PrecheckRuleEngineTests
         var decision = PrecheckRuleEngine.Evaluate(Intent, Address, []);
 
         Assert.Equal(ResultLevels.Green, decision.Level);
+        Assert.Equal(RegulatoryStatuses.NoKnownBlocker, decision.RegulatoryStatus);
         Assert.Contains(ReasonCodes.AddressFound, decision.ReasonCodes);
         Assert.Contains(ReasonCodes.NoRestrictionFound, decision.ReasonCodes);
         Assert.DoesNotContain(ReasonCodes.OfficialReviewRequired, decision.ReasonCodes);
@@ -72,6 +76,10 @@ public sealed class PrecheckRuleEngineTests
         Assert.Contains(ReasonCodes.HeritageSiteNearby, decision.ReasonCodes);
         Assert.Contains(ReasonCodes.HeritageCoordinationLikely, decision.ReasonCodes);
         Assert.Contains(decision.NextSteps, step => step.Contains("NKMP"));
+        var rule = Assert.Single(decision.AppliedRules);
+        Assert.Equal("HERITAGE_REVIEW", rule.RuleId);
+        Assert.Equal(1, rule.Version);
+        Assert.Contains(rule.Citations, citation => citation.SourceId == "law-cultural-heritage");
     }
 
     [Fact]
@@ -110,9 +118,20 @@ public sealed class PrecheckRuleEngineTests
     [Fact]
     public void EveryIntentHasAHeritageRule()
     {
-        foreach (var intent in IntentCatalog.All)
-        {
-            Assert.Contains(PrecheckRuleEngine.Rules, rule => rule.IntentId == intent.Id && rule.Source == "heritage");
-        }
+        Assert.Contains(PrecheckRuleEngine.Rules, rule =>
+            rule.IntentAny.Contains("*") && rule.SpatialFlagsAny.Contains("heritage"));
+    }
+
+    [Fact]
+    public void RigaRedLineForTerraceRequiresManualReview()
+    {
+        var decision = PrecheckRuleEngine.Evaluate(IntentCatalog.Find("terrace"), Address, [
+            new DataFinding("red_line", "RL-1", "Sarkanā līnija", "Rīga", true, null)
+        ]);
+
+        Assert.Equal(ResultLevels.Yellow, decision.Level);
+        Assert.Equal(RegulatoryStatuses.ManualReviewRequired, decision.RegulatoryStatus);
+        Assert.Contains(ReasonCodes.RedLineIntersects, decision.ReasonCodes);
+        Assert.Contains(decision.AppliedRules, rule => rule.RuleId == "RIGA_RED_LINE_REVIEW");
     }
 }

@@ -48,34 +48,52 @@ dotnet run --project src/VaiDrikstu.Api
 pnpm --dir web dev
 ```
 
-### Full official-data import (local only)
+### Full official-data import and Rīga rule layers (local only)
 
 Official snapshots are deliberately excluded from Git. Put them under
-`.local-data/sources/` and run:
+`.local-data/sources/`; place the separately collected regulation and Rīga
+snapshots in `new_data/`; then run:
 
 ```bash
 cd building-precheck/infra
 docker compose -f docker-compose.full.yml up --build
 ```
 
-This imports the nationwide VZD and DAP data plus the available Rīga layers.
-It can take several minutes and needs roughly 2 GB of local disk data. The
-official source snapshots remain on the developer machine and are not pushed to
-GitHub.
+This imports nationwide VZD, DAP and NKMP data, plus Rīga functional zoning,
+red lines and selected RTP 2030 protection-zone layers. It can take several
+minutes and needs roughly 2 GB of local disk data. Both local source folders
+are Git-ignored and mounted read-only; they never enter a Docker build context
+or GitHub.
 
-## Real-data checks
+## Real-data checks and rule registry
 
-The result depends on the selected action and actual spatial findings. A checked
-address can be green when no selected-action restriction is found in the loaded
-open data, or yellow where a heritage/nature finding requires an official review.
+`src/VaiDrikstu.Domain/RuleCatalog.cs` is the reviewed, versioned MVP catalog.
+It is copied on API start into the `legal_sources`, `legal_source_versions`,
+`rules`, `rule_conditions`, `rule_effects` and `rule_citations` tables. Each
+pre-check saves the project input, checking date, geographic findings, applied
+rule versions, citations and the complete result to `precheck_runs`.
 
-## Rule table
+The engine never asks an LLM to interpret a law. It applies only active rules
+for the address municipality, selected action and loaded spatial flags. The API
+returns both a presentation level and an auditable status:
 
-`src/VaiDrikstu.Domain/PrecheckRuleEngine.cs` contains `Rules`: one row per
-action × restriction with the likely procedure code (`NKMP_COORDINATION_LIKELY`,
-`DAP_CONDITIONS_LIKELY`, `MUNICIPAL_APPROVAL_LIKELY`) and the next step shown to
-the user. Every result also lists what was not checked (territorial planning,
-municipal binding regulations, encumbrances, co-owner consent).
+| API level | Regulatory status | Meaning |
+| --- | --- | --- |
+| `green` | `no_known_blocker` | No selected-action restriction was found in the loaded data. It is not a permit. |
+| `yellow` | `conditions_apply` | A protected-area or flood-risk condition needs an authority check. |
+| `yellow` | `manual_review_required` | Heritage, a Rīga protection area or a red-line finding requires review. |
+| `red` | `insufficient_data` | The address is absent or ambiguous, so the spatial check cannot be completed. |
+
+Current spatial flags used by rules are nationwide heritage proximity/intersection,
+ĪADT, and in the full Rīga import: cultural-heritage protection areas, urban
+heritage monuments, cultural-historic territories, building-protection areas,
+coastal protection zones, microreserves, flood-risk areas and red lines.
+Functional zoning is imported and returned as a finding for audit, but it does
+not yet determine an automated permission because the required project dimensions
+and local-plan rules are not fully normalised.
+
+`rule-engine-without-ai.md` explains the implemented model, source snapshot
+inventory and the boundary between the MVP rules and the next legal-review stage.
 
 ## API
 
@@ -85,6 +103,12 @@ municipal binding regulations, encumbrances, co-owner consent).
 - `POST /api/precheck`
 - `GET /api/precheck/{requestId}/summary`
 - `GET /openapi/v1.json`
+
+`POST /api/precheck` accepts the existing `{ intentId, addressId }` request and
+optionally `project` (`placement`, `areaSquareMeters`, `heightMeters`,
+`floorCount`, `changesFacade`) and `checkedOn`. The optional fields are recorded
+for audit now; they become decision inputs only when a reviewed rule explicitly
+uses them.
 
 ## VDAA alignment
 
@@ -111,6 +135,8 @@ The separately launched full-data stack loads official local snapshots from
 - DAP/ĢeoLatvija protected nature-area polygons;
 - Rīga territory-plan functional zoning and encumbrance polygons;
 - Rīga historical-centre and protection-zone planning polygons.
+- Rīga street red lines from the official GeoPackage and selected RTP 2030
+  ArcGIS protection-zone GeoJSON layers.
 - Planning-region to administrative-territory mappings.
 
 The importer preserves TAPIS and flood-risk WMS metadata in `source_catalog`.
@@ -120,4 +146,6 @@ deterministic PostGIS intersection.
 
 The demo contains only curated test geometry. It makes the stack reproducible
 without publishing 2 GB of raw snapshots; it is never presented as a substitute
-for the official full-data import.
+for the official full-data import. The full source inventory, snapshot hashes
+and official links are stored in `new_data/external/manifest.json` locally and
+the normatively relevant hashes are seeded in `legal_source_versions`.

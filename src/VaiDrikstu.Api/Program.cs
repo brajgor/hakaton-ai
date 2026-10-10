@@ -34,6 +34,8 @@ builder.Services.AddScoped<PrecheckRepository>();
 
 var app = builder.Build();
 
+await RuleRegistrySeeder.SeedAsync(app.Services.GetRequiredService<NpgsqlDataSource>());
+
 app.UseCors();
 app.MapOpenApi();
 app.MapGet("/swagger", () => Results.Redirect("/openapi/v1.json"));
@@ -87,7 +89,7 @@ app.MapPost("/api/precheck", async Task<Results<Ok<PrecheckResponse>, BadRequest
             ? []
             : await repository.GetFindingsAsync(address, cancellationToken);
 
-        var decision = PrecheckRuleEngine.Evaluate(intent, address, findings);
+        var decision = PrecheckRuleEngine.Evaluate(intent, address, findings, request.CheckedOn);
         var requestId = await repository.SavePrecheckRunAsync(request, address, decision, cancellationToken);
 
         return TypedResults.Ok(PrecheckResponse.FromDecision(requestId, decision));
@@ -118,7 +120,11 @@ namespace VaiDrikstu.Api
 {
     public sealed record MockSessionResponse(string Urn, string DisplayName, string AuthMethod);
     public sealed record IntentResponse(string Id, string Title, string Description);
-    public sealed record PrecheckRequest(string IntentId, string AddressId);
+    public sealed record PrecheckRequest(
+        string IntentId,
+        string AddressId,
+        ProjectParameters? Project = null,
+        DateOnly? CheckedOn = null);
     public sealed record ErrorResponse(string Code, string Message);
 
     public sealed record AddressResponse(
@@ -154,18 +160,24 @@ namespace VaiDrikstu.Api
     public sealed record PrecheckResponse(
         Guid RequestId,
         string Level,
+        string RegulatoryStatus,
         string[] ReasonCodes,
         FindingResponse[] DataFindings,
         string[] NextSteps,
+        string[] CoverageWarnings,
+        AppliedRule[] AppliedRules,
         string OfficialDisclaimer)
     {
         public static PrecheckResponse FromDecision(Guid requestId, PrecheckDecision decision) =>
             new(
                 requestId,
                 decision.Level,
+                decision.RegulatoryStatus,
                 decision.ReasonCodes,
                 decision.DataFindings.Select(FindingResponse.FromDomain).ToArray(),
                 decision.NextSteps,
+                decision.CoverageWarnings,
+                decision.AppliedRules,
                 decision.OfficialDisclaimer);
     }
 
@@ -174,9 +186,12 @@ namespace VaiDrikstu.Api
         string IntentId,
         string AddressLabel,
         string Level,
+        string RegulatoryStatus,
         string[] ReasonCodes,
         FindingResponse[] DataFindings,
         string[] NextSteps,
+        string[] CoverageWarnings,
+        AppliedRule[] AppliedRules,
         string OfficialDisclaimer,
         DateTimeOffset CreatedAt);
 
@@ -259,6 +274,12 @@ namespace VaiDrikstu.Api
                        null::double precision as distance_meters
                 from nature_areas n, address_point a
                 where st_intersects(n.geom, a.geom)
+                union all
+                select s.flag_type as source, s.id as code, s.name, s.category,
+                       st_intersects(s.geom, a.geom) as intersects,
+                       null::double precision as distance_meters
+                from spatial_flags s, address_point a
+                where st_intersects(s.geom, a.geom)
                 order by source, distance_meters nulls last;
                 """;
 
@@ -293,9 +314,9 @@ namespace VaiDrikstu.Api
             await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
             const string sql = """
                 insert into precheck_runs
-                    (request_id, intent_id, address_id, address_label, result_level, reason_codes, result_json, created_at)
+                    (request_id, intent_id, address_id, address_label, result_level, regulatory_status, reason_codes, coverage_warnings, applied_rules, project_parameters, checked_on, result_json, created_at)
                 values
-                    (@requestId, @intentId, @addressId, @addressLabel, @resultLevel, @reasonCodes::jsonb, @resultJson::jsonb, now());
+                    (@requestId, @intentId, @addressId, @addressLabel, @resultLevel, @regulatoryStatus, @reasonCodes::jsonb, @coverageWarnings::jsonb, @appliedRules::jsonb, @projectParameters::jsonb, @checkedOn, @resultJson::jsonb, now());
                 """;
 
             await using var command = new NpgsqlCommand(sql, connection);
@@ -304,7 +325,12 @@ namespace VaiDrikstu.Api
             command.Parameters.AddWithValue("addressId", (object?)address?.Id ?? DBNull.Value);
             command.Parameters.AddWithValue("addressLabel", (object?)address?.NormalizedAddress ?? "Adrese nav atrasta");
             command.Parameters.AddWithValue("resultLevel", decision.Level);
+            command.Parameters.AddWithValue("regulatoryStatus", decision.RegulatoryStatus);
             command.Parameters.AddWithValue("reasonCodes", JsonSerializer.Serialize(decision.ReasonCodes, JsonOptions));
+            command.Parameters.AddWithValue("coverageWarnings", JsonSerializer.Serialize(decision.CoverageWarnings, JsonOptions));
+            command.Parameters.AddWithValue("appliedRules", JsonSerializer.Serialize(decision.AppliedRules, JsonOptions));
+            command.Parameters.AddWithValue("projectParameters", JsonSerializer.Serialize(request.Project ?? new ProjectParameters(null, null, null, null, null), JsonOptions));
+            command.Parameters.AddWithValue("checkedOn", (request.CheckedOn ?? DateOnly.FromDateTime(DateTime.UtcNow)).ToDateTime(TimeOnly.MinValue));
             command.Parameters.AddWithValue("resultJson", JsonSerializer.Serialize(response, JsonOptions));
 
             await command.ExecuteNonQueryAsync(cancellationToken);
@@ -344,9 +370,12 @@ namespace VaiDrikstu.Api
                 intentId,
                 addressLabel,
                 response.Level,
+                response.RegulatoryStatus,
                 response.ReasonCodes,
                 response.DataFindings,
                 response.NextSteps,
+                response.CoverageWarnings,
+                response.AppliedRules,
                 response.OfficialDisclaimer,
                 createdAt);
         }
