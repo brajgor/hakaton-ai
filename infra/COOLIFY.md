@@ -26,13 +26,14 @@ relative `/api/...` URLs, and nginx will proxy them to the API container.
 
 ## Optional import variables
 
-Use these only when running the import profile:
+Use these only when running the import profile. The default Coolify import is
+the full national import:
 
 ```env
 DATA_SOURCES_HOST_PATH=/data/vaidrikstu/sources
 RULE_DATA_HOST_PATH=/data/vaidrikstu/rule-data
-IMPORT_PROFILE=regional
-ADDRESS_SCOPE_TERMS=Rīga,;Jūrmala,;Liepāja,;Daugavpils,;Valmiera,
+IMPORT_PROFILE=national
+ADDRESS_SCOPE_TERMS=
 ```
 
 The source mounts must contain the same layout as the local ignored folders:
@@ -55,17 +56,17 @@ docker compose --profile demo run --rm demo-seed
 docker compose up -d api web
 ```
 
-Regional real-data import:
+Full national import:
 
 ```bash
 docker compose --profile import run --rm data-importer
 docker compose up -d api web
 ```
 
-Full national import:
+Regional real-data import:
 
 ```bash
-IMPORT_PROFILE=national ADDRESS_SCOPE_TERMS= docker compose --profile import run --rm data-importer
+IMPORT_PROFILE=regional ADDRESS_SCOPE_TERMS='Rīga,;Jūrmala,;Liepāja,;Daugavpils,;Valmiera,' docker compose --profile import run --rm data-importer
 docker compose up -d api web
 ```
 
