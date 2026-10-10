@@ -1,77 +1,54 @@
 # Vai drīkstu te darīt?
 
-Hackathon MVP for a VDAA-compatible Latvija.gov.lv style e-service. The service
-performs a deterministic open-data pre-check for a selected action and address.
-It is not a legal permit issuer.
+Hackathon MVP priekšpārbaudei pirms būvniecības vai īpašuma uzlabojuma ieceres.
+Lietotājs izvēlas darbību un adresi, bet sistēma salīdzina adresi ar ielādētiem
+atvērtiem telpiskajiem datiem un paskaidro, kādi nākamie soļi var būt vajadzīgi.
 
-## Stack
+Šis nav atļauju izsniegšanas pakalpojums. Rezultāts vienmēr ir
+**priekšpārbaude**, un galīgo lēmumu pieņem kompetentā iestāde.
 
-- .NET 10 ASP.NET Core Minimal API BFF
-- React + TypeScript + Vite SPA
-- PostGIS for spatial checks
-- .NET Aspire AppHost for local orchestration, plus Docker Compose as a portable fallback
-- Deterministic rules engine, no LLM in the decision path
+## Arhitektūra
 
-## Run locally
+- `web` — React, TypeScript un Vite vienas lapas lietotne;
+- `api` — .NET 10 Minimal API/BFF ar OpenAPI;
+- `postgis` — telpisko datu un priekšpārbaužu audita datubāze;
+- `geo-importer` — GDAL konteiners Shape, GeoPackage un GeoJSON slāņiem;
+- `data-importer` — .NET 10 importētājs normalizētiem datiem un telpiskajiem
+  flagiem;
+- `RuleCatalog` — deterministisks, versēts noteikumu katalogs bez LLM/RAG
+  lēmuma ceļā.
 
-### Docker Compose
+Interfeisā ir trīs soļi: adrese un darbība, pārbaudes rezultāts, kopsavilkums.
+Priekšgals tieši nepiekļūst reģistriem — visi dati tiek vaicāti caur API.
+
+## Ātrais starts
+
+Lai palaistu reproducējamu demonstrāciju ar trim sagatavotiem scenārijiem:
 
 ```bash
 cd building-precheck/infra
 docker compose up --build
 ```
 
-Docker Compose starts PostGIS, imports the official local snapshots, runs the
-API, and serves the React SPA. By default it loads a tiny, versioned demo
-dataset with three scenarios: green, heritage review, and nature review. It is
-intended for the hackathon presentation, not for legal or spatial conclusions.
+Pēc palaišanas:
 
-After it finishes:
+- lietotne: `http://localhost:8081`;
+- API: `http://localhost:8080`;
+- OpenAPI: `http://localhost:8080/openapi/v1.json`.
 
-- SPA: `http://localhost:8081`
-- API: `http://localhost:8080`
-- OpenAPI: `http://localhost:8080/openapi/v1.json`
+Demo režīms ielādē tikai trīs adreses. Tas ir piemērots prezentācijas plūsmai,
+bet ne reālu adrešu meklēšanai.
 
-### Aspire
+## Ieteicamais hackathon režīms
 
-The AppHost project is retained as an Aspire-ready service-layout reference.
-For this data-heavy MVP, Docker Compose is the supported local launcher because
-it provides the GDAL container used to translate Shapefile and GeoPackage data.
+Reģionālais profils ir ātrākais režīms reālu adrešu demonstrācijai. Tas ielādē
+adreses Rīgā, Jūrmalā, Liepājā, Daugavpilī un Valmierā, DAP aizsargājamās dabas
+teritorijas, kā arī Rīgas plānojuma, aizsargjoslu un sarkano līniju slāņus.
 
-Manual fallback:
+Tam lokāli jābūt abām Git-ignorētajām datu mapēm:
 
-```bash
-docker run --platform linux/amd64 --name vai-drikstu-postgis -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=vaidrikstu -p 5432:5432 postgis/postgis:17-3.5
-docker compose -f infra/docker-compose.yml run --rm geo-importer
-dotnet run --project src/VaiDrikstu.DataImporter
-dotnet run --project src/VaiDrikstu.Api
-pnpm --dir web dev
-```
-
-### Full official-data import and Rīga rule layers (local only)
-
-Official snapshots are deliberately excluded from Git. Put them under
-`.local-data/sources/`; place the separately collected regulation and Rīga
-snapshots in `new_data/`; then run:
-
-```bash
-cd building-precheck/infra
-docker compose -f docker-compose.full.yml up --build
-```
-
-This imports nationwide VZD, DAP and NKMP data, plus Rīga functional zoning,
-red lines and selected RTP 2030 protection-zone layers. It can take several
-minutes and needs roughly 2 GB of local disk data. Both local source folders
-are Git-ignored and mounted read-only; they never enter a Docker build context
-or GitHub.
-
-### Fast regional import
-
-For a presentation where nationwide cadastral geometry is unnecessary, use the
-same stack in `regional` mode. It loads all addresses matching the chosen city
-fragments, DAP protected areas, and the Rīga planning/red-line/protection-zone
-layers, while deliberately skipping the slow national cadastral archives and
-encumbrance CSVs:
+- `.local-data/sources/` — VZD, DAP, NKMP un Rīgas telpiskie avoti;
+- `new_data/` — normatīvo aktu momentuzņēmumi un papildu Rīgas atvērtie dati.
 
 ```bash
 cd building-precheck/infra
@@ -81,92 +58,120 @@ docker compose \
   up --build
 ```
 
-The API marks the missing cadastral/NKMP linkage in `source_catalog`. The fast
-profile is suitable for address search and the listed spatial flags; it is not
-a substitute for the national profile. To alter the selected cities, pass
-`ADDRESS_SCOPE_TERMS='Rīga,;Cēsis,;Sigulda,'` before the command.
+Reģionālajā profilā apzināti netiek ielādēti nacionālie kadastra arhīvi un
+apgrūtinājumu CSV. Tāpēc tajā nav ar kadastru sasaistītā NKMP pieminekļu slāņa,
+zemes vienību ģeometrijas un pilnīgu apgrūtinājumu. Šis ierobežojums tiek
+saglabāts `source_catalog` un nav paslēpts no rezultāta interpretācijas.
 
-## Real-data checks and rule registry
+Lai mainītu pilsētu kopu, pirms komandas norādiet fragmentus:
 
-`src/VaiDrikstu.Domain/RuleCatalog.cs` is the reviewed, versioned MVP catalog.
-It is copied on API start into the `legal_sources`, `legal_source_versions`,
-`rules`, `rule_conditions`, `rule_effects` and `rule_citations` tables. Each
-pre-check saves the project input, checking date, geographic findings, applied
-rule versions, citations and the complete result to `precheck_runs`.
+```bash
+ADDRESS_SCOPE_TERMS='Rīga,;Cēsis,;Sigulda,' docker compose \
+  -f docker-compose.full.yml \
+  -f docker-compose.regional.yml \
+  up --build
+```
 
-The engine never asks an LLM to interpret a law. It applies only active rules
-for the address municipality, selected action and loaded spatial flags. The API
-returns both a presentation level and an auditable status:
+## Pilnais nacionālais imports
 
-| API level | Regulatory status | Meaning |
+Pilnajam importam izmanto tikai `docker-compose.full.yml`:
+
+```bash
+cd building-precheck/infra
+docker compose -f docker-compose.full.yml up --build
+```
+
+Tas ielādē VZD adrešu reģistru, kadastra zemes vienību un zemes vienību daļu
+ģeometrijas, apgrūtinājumus, NKMP sarakstu, DAP ĪADT un Rīgas plānojuma slāņus.
+Imports ir ievērojami lēnāks un prasa apmēram 2 GB lokālu avotu datu.
+
+`CADASTRE_ARCHIVE_PATTERN` ļauj nacionālajā profilā atlasīt kadastra arhīvus,
+bet `IMPORT_PARCELS=false` saglabā jau esošu zemes vienību importu. Šīs opcijas
+ir paredzētas lokālai izstrādei; juridiskam vai telpiski pilnīgam rezultātam
+izmantojiet pilno importu.
+
+## Noteikumu dzinējs
+
+`src/VaiDrikstu.Domain/RuleCatalog.cs` satur pārskatāmu MVP noteikumu katalogu.
+Katram noteikumam ir versija, spēkā stāšanās datums, jurisdikcija, telpiskais
+nosacījums, rezultāta statuss, nākamie soļi un oficiālo avotu citāti ar
+SHA-256 momentuzņēmumu.
+
+API startā katalogs tiek reģistrēts PostGIS tabulās:
+
+- `legal_sources`, `legal_source_versions`;
+- `rules`, `rule_conditions`, `rule_effects`, `rule_citations`;
+- `spatial_flags`;
+- `precheck_runs`.
+
+Katrs pieprasījums saglabā adresi, projekta parametrus, pārbaudes datumu,
+atrastos telpiskos faktus, piemērotos noteikumus un pilnu atbildi. Detalizētāks
+skaidrojums ir [rule-engine-without-ai.md](rule-engine-without-ai.md).
+
+| Lietotāja līmenis | Noteikumu statuss | Nozīme |
 | --- | --- | --- |
-| `green` | `no_known_blocker` | No selected-action restriction was found in the loaded data. It is not a permit. |
-| `yellow` | `conditions_apply` | A protected-area or flood-risk condition needs an authority check. |
-| `yellow` | `manual_review_required` | Heritage, a Rīga protection area or a red-line finding requires review. |
-| `red` | `insufficient_data` | The address is absent or ambiguous, so the spatial check cannot be completed. |
+| `green` | `no_known_blocker` | Ielādētajos datos izvēlētajai darbībai nav atrasts zināms ierobežojums. Tā nav atļauja. |
+| `yellow` | `conditions_apply` | Jānoskaidro DAP vai citas iestādes nosacījumi. |
+| `yellow` | `manual_review_required` | Nepieciešama manuāla mantojuma, aizsargājamās teritorijas vai sarkanās līnijas pārbaude. |
+| `red` | `insufficient_data` | Adresi nevarēja atrast vai ar datiem nepietiek telpiskai pārbaudei. |
 
-Current spatial flags used by rules are nationwide heritage proximity/intersection,
-ĪADT, and in the full Rīga import: cultural-heritage protection areas, urban
-heritage monuments, cultural-historic territories, building-protection areas,
-coastal protection zones, microreserves, flood-risk areas and red lines.
-Functional zoning is imported and returned as a finding for audit, but it does
-not yet determine an automated permission because the required project dimensions
-and local-plan rules are not fully normalised.
-
-`rule-engine-without-ai.md` explains the implemented model, source snapshot
-inventory and the boundary between the MVP rules and the next legal-review stage.
+Pašlaik noteikumi izmanto kultūras mantojuma, ĪADT, Rīgas kultūrvēsturisko
+teritoriju, aizsargājamas apbūves, piekrastes, mikroliegumu, applūšanas riska
+un sarkano līniju flagus. Rīgas funkcionālais zonējums tiek parādīts kā atradums,
+bet vēl neveido automātisku atļaujas lēmumu — tam būtu vajadzīgi juridiski
+pārbaudīti parametru noteikumi un pilnīga lokālplānojumu normalizācija.
 
 ## API
 
-- `GET /api/session/mock`
-- `GET /api/intents`
-- `GET /api/addresses/search?q=...`
-- `POST /api/precheck`
-- `GET /api/precheck/{requestId}/summary`
-- `GET /openapi/v1.json`
+- `GET /api/session/mock` — demonstrācijas Latvija.gov.lv sesija;
+- `GET /api/intents` — atbalstītās darbības;
+- `GET /api/addresses/search?q=...` — adreses meklēšana;
+- `POST /api/precheck` — priekšpārbaude;
+- `GET /api/precheck/{requestId}/summary` — saglabātais kopsavilkums;
+- `GET /openapi/v1.json` — OpenAPI dokuments.
 
-`POST /api/precheck` accepts the existing `{ intentId, addressId }` request and
-optionally `project` (`placement`, `areaSquareMeters`, `heightMeters`,
-`floorCount`, `changesFacade`) and `checkedOn`. The optional fields are recorded
-for audit now; they become decision inputs only when a reviewed rule explicitly
-uses them.
+`POST /api/precheck` pieņem esošo UI pieprasījumu:
 
-## VDAA alignment
+```json
+{
+  "intentId": "terrace",
+  "addressId": "101093433",
+  "project": {
+    "placement": "yard",
+    "areaSquareMeters": 12,
+    "heightMeters": 3,
+    "floorCount": 1,
+    "changesFacade": false
+  },
+  "checkedOn": "2026-10-10"
+}
+```
 
-The MVP follows the local `vdaa-epakalpojumi` skill constraints:
+`project` un `checkedOn` jau tiek saglabāti auditam. Tie kļūs par automātiska
+lēmuma daļu tikai pēc tam, kad konkrētas normas būs manuāli pārbaudītas un
+formalizētas noteikumos.
 
-- React SPA path with a BFF/API layer.
-- REST JSON and OpenAPI.
-- Server-side validation and deterministic reason codes.
-- No direct frontend registry access.
-- 4-step mobile-first flow with a summary step.
-- Mock Latvija.lv session and milestones only; real OIDC/PFAS/VISS/AMK are
-  documented production integration points.
+## Datu robežas
 
-## Data scope
+Avotu datu mapes ir apzināti izslēgtas no Git un Docker build context. Konteineri
+tās pievieno tikai lasīšanas režīmā. `new_data/external/manifest.json` glabā
+lejupielādēto failu oficiālās saites un SHA-256 vērtības.
 
-The default Docker Compose stack loads the small demo dataset in `data/demo`.
-The separately launched full-data stack loads official local snapshots from
-`.local-data/sources`:
+TAPIS un plūdu WMS/XML metadati pašlaik ir `reference-only`: piegādātie faili
+nav pietiekami pilnīgi vektora dati deterministiskai telpiskai pārbaudei.
 
-- VZD State Address Register: active, confirmed address points nationwide;
-- VZD cadastral parcel and parcel-part geometry plus regional encumbrance CSVs;
-- NKMP state-protected immovable-monument register, joined to cadastral geometry
-  only when its cadastral designation is valid and present in the source data;
-- DAP/ĢeoLatvija protected nature-area polygons;
-- Rīga territory-plan functional zoning and encumbrance polygons;
-- Rīga historical-centre and protection-zone planning polygons.
-- Rīga street red lines from the official GeoPackage and selected RTP 2030
-  ArcGIS protection-zone GeoJSON layers.
-- Planning-region to administrative-territory mappings.
+Nav automatizēti visi lokālplānojumi, detālplānojumi, inženierkomunikāciju
+aizsargjoslas, precīza ieceres ģeometrija, kopīpašnieku piekrišana un slēgtie
+reģistri. Tāpēc `green` nozīmē tikai to, ka ielādētajos datos nav atrasts
+zināms signāls, nevis to, ka būvniecība ir atļauta.
 
-The importer preserves TAPIS and flood-risk WMS metadata in `source_catalog`.
-They are marked `reference-only`: the supplied TAPIS extract is partial and the
-flood files are WMS capability documents, not vector features suitable for a
-deterministic PostGIS intersection.
+## Pārbaudes
 
-The demo contains only curated test geometry. It makes the stack reproducible
-without publishing 2 GB of raw snapshots; it is never presented as a substitute
-for the official full-data import. The full source inventory, snapshot hashes
-and official links are stored in `new_data/external/manifest.json` locally and
-the normatively relevant hashes are seeded in `legal_source_versions`.
+```bash
+dotnet test VaiDrikstu.sln
+pnpm --dir web build
+```
+
+Docker Compose ir ieteicamais palaišanas veids. Aspire AppHost paliek risinājumā
+kā servisu izkārtojuma atsauce, bet šim datu smagajam MVP tas nav primārais
+orķestrators.
