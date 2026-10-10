@@ -211,39 +211,70 @@ function App() {
 }
 
 function LandingScreen({ onStart }: { onStart: () => void }) {
-  const features = [
-    { icon: <MapPin size={22} aria-hidden="true" />, title: texts.landing.feature1Title, text: texts.landing.feature1Text },
-    { icon: <Database size={22} aria-hidden="true" />, title: texts.landing.feature2Title, text: texts.landing.feature2Text },
-    { icon: <ShieldCheck size={22} aria-hidden="true" />, title: texts.landing.feature3Title, text: texts.landing.feature3Text },
+  const steps = [
+    { title: texts.landing.feature1Title, text: texts.landing.feature1Text },
+    { title: texts.landing.feature2Title, text: texts.landing.feature2Text },
+    { title: texts.landing.feature3Title, text: texts.landing.feature3Text },
   ];
 
   return (
     <main className="shell landing">
-      <p className="eyebrow">Latvija.gov.lv e-pakalpojuma prototips</p>
-      <h1>{texts.appTitle}</h1>
-      <p className="lead">{texts.landing.lead}</p>
+      <header className="landingHero">
+        <p className="eyebrow">Latvija.gov.lv e-pakalpojuma prototips</p>
+        <h1>{texts.appTitle}</h1>
+        <p className="lead">{texts.landing.lead}</p>
+      </header>
 
-      <section className="panel landingPanel">
-        <h2>{texts.landing.howTitle}</h2>
-        <ul className="features">
-          {features.map((feature) => (
-            <li key={feature.title}>
-              {feature.icon}
-              <span>
-                <strong>{feature.title}</strong>
-                <small>{feature.text}</small>
-              </span>
-            </li>
-          ))}
-        </ul>
-        <p className="disclaimer">{texts.disclaimer}</p>
-      </section>
+      <ol className="howSteps">
+        {steps.map((step, index) => (
+          <li key={step.title}>
+            <span className="howNum">{index + 1}</span>
+            <strong>{step.title}</strong>
+            <small>{step.text}</small>
+          </li>
+        ))}
+      </ol>
 
-      <div className="landingActions">
-        <button type="button" className="primary" onClick={onStart}>
+      <section className="startCard">
+        <ShieldCheck size={36} aria-hidden="true" />
+        <div>
+          <h2>{texts.landing.startTitle}</h2>
+          <p>{texts.disclaimer}</p>
+        </div>
+        <button type="button" className="startButton" onClick={onStart}>
           {texts.landing.start}
           <ArrowRight size={18} aria-hidden="true" />
         </button>
+      </section>
+
+      <div className="landingGrid">
+        <section className="panel landingPanel">
+          <h2>{texts.landing.dataTitle}</h2>
+          <p className="muted landingNote">{texts.landing.dataLead}</p>
+          <ul className="sources">
+            {texts.landing.data.map((source) => (
+              <li key={source.title}>
+                <Database size={20} aria-hidden="true" />
+                <span>
+                  <strong>{source.title}</strong>
+                  <small>{source.text}</small>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="panel landingPanel">
+          <h2>{texts.landing.faqTitle}</h2>
+          <div className="faq">
+            {texts.landing.faq.map((item) => (
+              <details key={item.q}>
+                <summary>{item.q}</summary>
+                <p>{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
       </div>
     </main>
   );

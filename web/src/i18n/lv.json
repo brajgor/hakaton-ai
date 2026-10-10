@@ -2,7 +2,11 @@
   "appTitle": "Plānoto darbu priekšpārbaude pēc adreses",
   "appSubtitle": "Priekšpārbaude pēc atvērtajiem datiem pirms oficiālās saskaņošanas.",
   "disclaimer": "Šī ir priekšpārbaude, nevis galīgā atļauja. Galīgo lēmumu pieņem kompetentā iestāde.",
-  "steps": ["Adrese un darbība", "Pārbaudes rezultāts", "Kopsavilkums"],
+  "steps": [
+    "Adrese un darbība",
+    "Pārbaudes rezultāts",
+    "Kopsavilkums"
+  ],
   "actionsTitle": "Ko Jūs vēlaties darīt?",
   "actionsLead": "Izvēlieties vienu darbību šai adresei. Retākus gadījumus šajā prototipā vēl neapstrādājam.",
   "addressTitle": "Kur plānota darbība?",
@@ -34,6 +38,42 @@
     "feature2Text": "Sistēma pēc skaidriem noteikumiem salīdzina adresi ar atvērtajiem telpiskajiem datiem.",
     "feature3Title": "Rezultāts un nākamie soļi",
     "feature3Text": "Saņemiet pamatotu rezultātu un norādi, kas jādara tālāk oficiālajā saskaņošanā.",
-    "start": "Sākt priekšpārbaudi"
+    "start": "Sākt priekšpārbaudi",
+    "dataTitle": "Kādus datus izmantojam",
+    "dataLead": "Priekšpārbaude salīdzina adresi ar atvērtajiem datiem. Šobrīd prototipā tiek izmantots neliels demonstrācijas datu izgriezums; datu apraksts tiks papildināts, pievienojot reālās datu kopas.",
+    "data": [
+      {
+        "title": "Adrešu dati",
+        "text": "Valsts zemes dienesta adrešu dati adreses meklēšanai un precīzai atrašanās vietai."
+      },
+      {
+        "title": "Kultūras pieminekļi",
+        "text": "Nacionālās kultūras mantojuma pārvaldes (NKMP) dati par aizsargājamiem kultūras pieminekļiem un to aizsargjoslām."
+      },
+      {
+        "title": "Aizsargājamās dabas teritorijas",
+        "text": "Dabas aizsardzības pārvaldes (DAP) un ĢeoLatvija dati par īpaši aizsargājamām dabas teritorijām."
+      }
+    ],
+    "faqTitle": "Biežāk uzdotie jautājumi",
+    "faq": [
+      {
+        "q": "Vai priekšpārbaude ir atļauja?",
+        "a": "Nē. Tā ir orientējoša pārbaude pēc atvērtajiem datiem. Galīgo lēmumu pieņem kompetentā iestāde."
+      },
+      {
+        "q": "Kādu informāciju man vajag ievadīt?",
+        "a": "Tikai adresi un plānoto darbību. Citi dati nav nepieciešami."
+      },
+      {
+        "q": "Kā tiek noteikts rezultāts?",
+        "a": "Rezultāts tiek noteikts pēc skaidriem, iepriekš definētiem noteikumiem, salīdzinot adresi ar datu kopām. Mākslīgais intelekts lēmumā nav iesaistīts."
+      },
+      {
+        "q": "Ko darīt pēc priekšpārbaudes?",
+        "a": "Rezultātā redzēsiet iespējamās procedūras un nākamos soļus, kas jāveic oficiālajā saskaņošanā."
+      }
+    ],
+    "startTitle": "Sāciet priekšpārbaudi"
   }
 }
