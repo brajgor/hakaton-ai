@@ -9,6 +9,11 @@ public static class ReasonCodes
     public const string NatureAreaIntersects = "NATURE_AREA_INTERSECTS";
     public const string NoRestrictionFound = "NO_RESTRICTION_FOUND_IN_OPEN_DATA";
     public const string OfficialReviewRequired = "OFFICIAL_REVIEW_REQUIRED";
+
+    // Likely procedures, depending on the selected intent
+    public const string HeritageCoordinationLikely = "NKMP_COORDINATION_LIKELY";
+    public const string NatureAuthorityCheckLikely = "DAP_CONDITIONS_LIKELY";
+    public const string MunicipalApprovalRequired = "MUNICIPAL_APPROVAL_LIKELY";
 }
 
 public static class ResultLevels
