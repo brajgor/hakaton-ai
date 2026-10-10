@@ -92,5 +92,17 @@
     "NKMP_COORDINATION_LIKELY": "Darbību, visticamāk, nepieciešams saskaņot ar Nacionālo kultūras mantojuma pārvaldi.",
     "DAP_CONDITIONS_LIKELY": "Darbībai, visticamāk, būs jāievēro Dabas aizsardzības pārvaldes nosacījumi.",
     "MUNICIPAL_APPROVAL_LIKELY": "Darbībai, visticamāk, būs nepieciešama pašvaldības saskaņošana."
+  },
+  "assistant": {
+    "title": "Palīgs: jautājiet par rezultātu",
+    "lead": "Paskaidroju rezultātu un atšifrēju kodus: apgrūtinājumus, kadastra atzīmes, zonējumu, aizsargjoslas, dabas teritorijas un pieminekļus.",
+    "placeholder": "Piemēram: Ko nozīmē 7312030100? / Kas ir DzS1?",
+    "inputLabel": "Jautājums palīgam",
+    "send": "Jautāt",
+    "thinking": "Meklēju datos…",
+    "suggestions": "Ieteiktie jautājumi",
+    "source": "Avots",
+    "open": "Atvērt",
+    "error": "Palīgs pašlaik nav pieejams."
   }
 }

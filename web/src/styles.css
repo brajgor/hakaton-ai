@@ -663,3 +663,193 @@ button:disabled {
     width: 100%;
   }
 }
+
+/* Result assistant ------------------------------------------------------- */
+
+.assistant {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px;
+  background: #fbfcfe;
+}
+
+.assistantHeader {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  color: var(--brand-dark);
+}
+
+.assistantHeader h3 {
+  margin-bottom: 4px;
+}
+
+.assistantHeader p {
+  margin-bottom: 12px;
+}
+
+.assistantLog {
+  display: grid;
+  gap: 10px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding: 4px 2px 8px;
+}
+
+.bubble {
+  margin: 0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  line-height: 1.45;
+  max-width: 92%;
+}
+
+.bubble.user {
+  justify-self: end;
+  background: var(--brand);
+  color: #fff;
+}
+
+.bubble.bot {
+  justify-self: start;
+  background: #fff;
+  border: 1px solid var(--border);
+}
+
+.bubble.bot > p {
+  margin-bottom: 8px;
+}
+
+.bubble.pending {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+}
+
+.answerItems {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.answerItems > li {
+  border-left: 3px solid #95bde0;
+  padding: 6px 0 6px 12px;
+}
+
+.answerItems strong {
+  display: block;
+  margin: 4px 0;
+}
+
+.answerItems p {
+  margin: 0 0 6px;
+  white-space: pre-line;
+}
+
+.answerMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.answerMeta .kind {
+  color: var(--brand-dark);
+  font-weight: 700;
+}
+
+.answerMeta code {
+  background: #eef3f9;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.answerMeta .original {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.details {
+  margin: 0 0 6px;
+  padding-left: 18px;
+  font-size: 0.92rem;
+}
+
+.source {
+  display: block;
+  font-size: 0.8rem;
+}
+
+.source a {
+  color: var(--brand);
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.suggestions {
+  margin: 10px 0;
+}
+
+.suggestions button {
+  border: 1px solid #95bde0;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: #fff;
+  color: var(--brand-dark);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.suggestions button:hover {
+  background: #eef5fc;
+}
+
+.assistantForm {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.assistantForm input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 11px 12px;
+}
+
+.assistantError {
+  color: var(--red);
+}
+
+.assistantDisclaimer {
+  font-size: 0.82rem;
+  margin: 10px 0 0;
+}
+
+@media (max-width: 760px) {
+  .assistantForm {
+    grid-template-columns: 1fr;
+  }
+
+  .bubble {
+    max-width: 100%;
+  }
+}
+
+@media print {
+  .assistantForm,
+  .suggestions {
+    display: none;
+  }
+
+  .assistantLog {
+    max-height: none;
+    overflow: visible;
+  }
+}

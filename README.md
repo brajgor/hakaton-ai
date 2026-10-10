@@ -121,6 +121,35 @@ un sarkano līniju flagus. Rīgas funkcionālais zonējums tiek parādīts kā a
 bet vēl neveido automātisku atļaujas lēmumu — tam būtu vajadzīgi juridiski
 pārbaudīti parametru noteikumi un pilnīga lokālplānojumu normalizācija.
 
+## Rezultāta palīgs (bots)
+
+Kopsavilkuma solī ir čata palīgs, kas atbild uz jautājumiem par rezultātu un atšifrē
+kodus. Tas ir **deterministisks, bez LLM**: atbildes veido tikai no vārdnīcām un
+tekstiem, kas ģenerēti no projekta atvērto datu mapēm, un katram punktam ir norādīts avots.
+Atbild latviski, krieviski vai angliski (jautājuma valodā).
+
+Ko prot:
+
+- paskaidrot rezultātu un visus pamatojuma kodus ("Kāpēc dzeltens?", "Что делать дальше?");
+- VZD apgrūtinājumu kodus (`7312030100`, vecie 6 ciparu kodi) - 331 kods;
+- kadastra atzīmes pēc veida (`atzīme 0802`) vai kadastra apzīmējuma (`01000770210099`);
+- Rīgas funkcionālās zonas (`DzS1`, `JC2`), RVC izmantošanas kodus, `TIN` teritorijas, TAPIS indeksus;
+- Rīgas aizsargjoslu slāņus, ĪADT (876 teritorijas, kategorijas, zonas), 9 042 kultūras pieminekļus;
+- brīva teksta meklēšanu 894 normatīvo aktu pantos/punktos un datu kopu aprakstos.
+
+API: `POST /api/assistant/ask` (`question`, `requestId`, `language`) un `GET /api/assistant/labels/{code}`.
+Dzinējs: `src/VaiDrikstu.Domain/Assistant`, testi: `tests/VaiDrikstu.Domain.Tests/AssistantEngineTests.cs`.
+
+Zināšanu bāzi `data/assistant/*.json` pārģenerē no datu mapēm:
+
+```bash
+pip install beautifulsoup4 lxml   # pdftotext (poppler) - pēc izvēles, Rīgas TIAN zonām
+python tools/assistant-kb/build_knowledge_base.py \
+  --sources  "<ceļš>/sources" \
+  --external "<ceļš>/data/external" \
+  --out data/assistant
+```
+
 ## API
 
 - `GET /api/session/mock` — demonstrācijas Latvija.gov.lv sesija;
