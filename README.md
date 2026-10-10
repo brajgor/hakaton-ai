@@ -14,47 +14,45 @@ It is not a legal permit issuer.
 
 ## Run locally
 
-### Aspire
-
-```bash
-cd hakaton-ai
-dotnet restore
-pnpm --dir web install
-dotnet run --project src/VaiDrikstu.AppHost
-```
-
-The AppHost starts PostGIS, imports the demo data, runs the API, and starts the
-Vite frontend. The PostGIS image is pinned to `postgis/postgis:17-3.5` and the
-AppHost passes `--platform linux/amd64` for Apple Silicon compatibility.
-
 ### Docker Compose
 
 ```bash
-cd hakaton-ai/infra
+cd building-precheck/infra
 docker compose up --build
 ```
 
-Docker Compose starts the PostGIS container, imports demo data, runs the API,
-and serves the React SPA.
+Docker Compose starts PostGIS, imports the official local snapshots, runs the
+API, and serves the React SPA. The first run imports the national cadastral
+geometry and can take several minutes. Later runs repeat the import so a change
+in a source snapshot is always reflected in the database.
+
+After it finishes:
+
+- SPA: `http://localhost:8081`
+- API: `http://localhost:8080`
+- OpenAPI: `http://localhost:8080/openapi/v1.json`
+
+### Aspire
+
+The AppHost project is retained as an Aspire-ready service-layout reference.
+For this data-heavy MVP, Docker Compose is the supported local launcher because
+it provides the GDAL container used to translate Shapefile and GeoPackage data.
 
 Manual fallback:
 
 ```bash
 docker run --platform linux/amd64 --name vai-drikstu-postgis -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=vaidrikstu -p 5432:5432 postgis/postgis:17-3.5
+docker compose -f infra/docker-compose.yml run --rm geo-importer
 dotnet run --project src/VaiDrikstu.DataImporter
 dotnet run --project src/VaiDrikstu.Api
 pnpm --dir web dev
 ```
 
-## Demo searches
+## Real-data checks
 
-- `Zvaigžņu` -> green case
-- `Pils laukums` -> cultural heritage yellow case
-- `Meža prospekts` -> protected nature yellow case
-
-The result depends on the selected action. For example, `Meža prospekts` gives
-yellow for solar panels or a small auxiliary building (DAP conditions), but green
-for changing windows, because the nature area status rarely affects facade work.
+The result depends on the selected action and actual spatial findings. A checked
+address can be green when no selected-action restriction is found in the loaded
+open data, or yellow where a heritage/nature finding requires an official review.
 
 ## Rule table
 
@@ -87,6 +85,22 @@ The MVP follows the local `vdaa-epakalpojumi` skill constraints:
 
 ## Data scope
 
-`data/sources` contains tiny curated demo snapshots. Production ingestion should
-replace them with official VZD address data, NKMP cultural heritage data, and
-DAP/ĢeoLatvija protected nature data.
+Docker Compose loads the official local snapshots in `data/sources` rather than
+the old demo JSON fixtures:
+
+- VZD State Address Register: active, confirmed address points nationwide;
+- VZD cadastral parcel and parcel-part geometry plus regional encumbrance CSVs;
+- NKMP state-protected immovable-monument register, joined to cadastral geometry
+  only when its cadastral designation is valid and present in the source data;
+- DAP/ĢeoLatvija protected nature-area polygons;
+- Rīga territory-plan functional zoning and encumbrance polygons;
+- Rīga historical-centre and protection-zone planning polygons.
+- Planning-region to administrative-territory mappings.
+
+The importer preserves TAPIS and flood-risk WMS metadata in `source_catalog`.
+They are marked `reference-only`: the supplied TAPIS extract is partial and the
+flood files are WMS capability documents, not vector features suitable for a
+deterministic PostGIS intersection.
+
+The old `*.demo.json` files are retained only as historical fixtures and are no
+longer read by Docker Compose or the data importer.
